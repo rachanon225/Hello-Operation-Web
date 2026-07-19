@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ✏️ ป้องกันเบราว์เซอร์/LINE แคชหน้านี้ไว้นานเกินไป ช่วยให้เห็นโค้ดเวอร์ชันล่าสุดเร็วขึ้นทุกครั้งที่แก้ไฟล์ -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    /* ✏️ แก้ได้: โทนสีหลักของทั้งหน้า — ธีมเนวี่ #000033 ตามสีโลโก้บริษัท สลับกับขาว */
+    :root {
+      --bg-page: #f2f3f7;
+      --text-dark: #14142b;
+      --text-muted: #6b6b85;
+      --navy: #000033;
+      --navy-light: #1a1a4d;
+      --card-dark-bg: #000022;      /* พื้นหลังเข้มของหน้าต่างขอ OT (โทนเดียวกับเนวี่) */
+      --card-dark-bg-2: #000044;    /* ไล่เฉดเข้ากับพื้นหลังเข้ม ให้มีมิติ */
+      --accent: #5566ee;            /* สี accent สำหรับเส้นขอบ/โฟกัส — เนวี่โทนสว่างขึ้นให้มองเห็นชัดบนพื้นเข้ม */
+      --text-on-dark: #e8e9ec;
+      --text-on-dark-muted: #9aa0ab;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(180deg, #dcdcf0 0%, var(--bg-page) 220px);
+      color: var(--text-dark);
+      margin: 0;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    /* ✏️ แก้ได้: animation ตอนเปิดหน้า — การ์ดค่อยๆ เลื่อนขึ้นพร้อมจางเข้า ดูทันสมัยขึ้น */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ✏️ แก้ได้: การ์ดขาวหลักที่ห่อหุ้มเนื้อหาทั้งหมด ให้ลอยเด่นจากพื้นหลัง */
+    .app-card {
+      max-width: 360px;
+      margin: 12px auto 0;
+      background: #ffffff;
+      border-radius: 22px;
+      padding: 20px 20px 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 51, 0.14), 0 2px 8px rgba(0,0,0,0.04);
+      text-align: center;
+      animation: fadeSlideUp 0.5s ease both;
+    }
+
+    /* ✏️ แก้ได้: แถวหัวข้อ — โลโก้ชิดซ้าย + ข้อความหัวข้อ/ชื่อพนักงาน อยู่ข้างกัน */
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      margin-bottom: 6px;
+    }
+
+    /* ✏️ แก้ได้: ขนาดโลโก้บริษัท — ดูคำอธิบายวิธีเปลี่ยนไฟล์โลโก้ด้านล่างในส่วน HTML */
+    .company-logo {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      display: block;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    /* ✏️ แก้ได้: หัวข้อหลัก (อยู่บรรทัดบนในกล่องข้อความข้างโลโก้) */
+    #pageTitle {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0;
+      letter-spacing: 0.01em;
+    }
+
+    /* ✏️ แก้ได้: ข้อความ "สวัสดีคุณ..." (บรรทัดถัดมาใต้หัวข้อ) */
+    #greeting { margin: 2px 0 0; font-size: 15px; font-weight: 400; }
+
+    /* ✏️ แก้ได้: นาฬิกาบอกเวลาปัจจุบัน ตัวใหญ่กลางจอ (อัปเดตทุกวินาทีด้วย JS) */
+    #liveClock {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--navy);
+      margin: 8px 0 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    /* ✏️ แก้ได้: เครื่องหมาย : กระพริบทุกวินาที ให้ดูเหมือนนาฬิกาดิจิทัลจริง */
+    @keyframes blinkColon { 50% { opacity: 0.25; } }
+    #liveClock .clock-colon { animation: blinkColon 1s step-start infinite; }
+    #liveDate { color: var(--text-muted); font-size: 13px; margin-bottom: 18px; }
+
+    /* ✏️ แก้ได้: ปุ่มทั้งหมด (ลงเวลาเข้า/ออก, ส่งคำขออนุมัติ) — สีเนวี่ล้วน ไม่มีเงา/ไล่เฉด ตามที่กำหนด */
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 6px 0;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-sizing: border-box;
+      background: var(--navy);
+      color: white;
+      box-shadow: none;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    button:active { opacity: 0.85; transform: scale(0.97); }
+
+    /* ✏️ แก้ได้: ไอคอน SVG ในปุ่ม — ขนาด/สีปรับได้ตรงนี้ */
+    button svg { width: 19px; height: 19px; flex-shrink: 0; }
+
+    #btnIn, #btnOut { background: var(--navy); color: white; border: none; }
+
+    /* ✏️ แก้ได้: animation เปลี่ยนข้อความสถานะ (status) ให้ค่อยๆ จางเข้าแทนโผล่มาทันที */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    #status:not(:empty) { animation: fadeIn 0.3s ease both; }
+
+    video {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 14px;
+      background: #000;
+      margin-bottom: 4px;
+    }
+
+    #status { margin-top: 16px; white-space: pre-line; font-weight: 600; font-size: 14px; }
+
+    /* ✏️ แก้ได้: หน้าต่างขอ OT — พื้นขาว กรอบเนวี่ #000033 */
+    #otForm {
+      display: none;
+      margin: 16px auto 0;
+      text-align: left;
+      max-width: 340px;
+      padding: 24px 20px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 2px solid var(--navy);
+      color: var(--text-dark);
+    }
+
+    #otForm label {
+      font-weight: 600;
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 4px;
+      color: var(--navy);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* ✏️ แก้ได้: ช่องกรอกทั้งหมดในฟอร์ม OT — พื้นขาว ตัวอักษรเข้ม */
+    #otForm input,
+    #otForm select,
+    #otForm textarea {
+      width: 100%;
+      padding: 10px 12px;
+      margin: 2px 0;
+      box-sizing: border-box;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #d3d6de;
+      background: #ffffff;
+      color: var(--text-dark);
+      font-family: inherit;
+    }
+    /* ✏️ แก้ได้: แสงเรืองรอบช่องกรอกตอนคลิก (focus glow) */
+    #otForm input:focus,
+    #otForm select:focus,
+    #otForm textarea:focus {
+      outline: none;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(0, 0, 51, 0.15);
+    }
+
+    .hoursMinutesRow { display: flex; gap: 8px; }
+    .hoursMinutesRow > div { flex: 1; }
+
+    /* ✏️ แก้ได้: แถว checkbox เลือกประเภท OT (ก่อนเข้างาน / เลิกงานช้า) */
+    .otTypeRow { display: flex; gap: 8px; margin-top: 14px; }
+    .otCheckboxLabel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--navy);
+      border: 1px solid #d3d6de;
+      border-radius: 8px;
+      padding: 10px 8px;
+      cursor: pointer;
+      text-transform: none;
+    }
+    .otCheckboxLabel.active { background: rgba(0, 0, 51, 0.06); border-color: var(--navy); }
+    .otCheckboxLabel input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--navy);
+      flex-shrink: 0;
+    }
+    /* ✏️ แก้ได้: กล่อง ชม./นาที ที่เด้งออกมาเมื่อติ๊ก — เว้นระยะห่างจากแถว checkbox */
+    .otTimeRow { margin-top: 8px; }
+
+    #btnSubmitOt {
+      background: var(--navy);
+      width: 100%;
+      margin-top: 18px;
+      box-shadow: none;
+    }
+
+    /* ✏️ แก้ได้: หน้าแอดมิน + หน้าบันทึกงาน + หน้าข้อมูลทีม — พื้นขาว กรอบเนวี่ #000033 เหมือนฟอร์ม OT */
+    #adminSection, #noteSection, #teamSection {
+      display: none;
+      margin: 16px auto 0;
+      text-align: left;
+      max-width: 340px;
+      padding: 20px 20px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 2px solid var(--navy);
+      color: var(--text-dark);
+    }
+    #adminSection label, #noteSection label, #teamSection label {
+      font-weight: 600; display: block; margin-top: 14px; margin-bottom: 4px;
+      color: var(--navy); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    #adminSection input, #adminSection select, #adminSection textarea,
+    #noteSection input, #noteSection textarea,
+    #teamSection input, #teamSection select {
+      width: 100%; padding: 10px 12px; margin: 2px 0; box-sizing: border-box; font-size: 15px;
+      border-radius: 8px; border: 1px solid #d3d6de; background: #fff; color: var(--text-dark); font-family: inherit;
+    }
+    #adminSection input:focus, #adminSection select:focus, #adminSection textarea:focus,
+    #noteSection input:focus, #noteSection textarea:focus,
+    #teamSection input:focus, #teamSection select:focus {
+      outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0, 0, 51, 0.15);
+    }
+
+    /* ✏️ แก้ได้: ปุ่มสลับแท็บ "รายงาน Excel" / "ตั้งค่า" ในหน้าแอดมิน */
+    .adminTabs { display: flex; gap: 8px; margin-bottom: 8px; }
+    .adminTabBtn {
+      flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--navy);
+      background: #fff; color: var(--navy); font-size: 13px; font-weight: 600; cursor: pointer;
+      box-shadow: none; margin: 0;
+    }
+    .adminTabBtn.active { background: var(--navy); color: #fff; }
+
+    #notesListView { margin-top: 10px; font-size: 13px; }
+    .noteRow { padding: 8px 0; border-bottom: 1px solid #eee; }
+    .noteRow .noteDate { font-weight: 700; color: var(--navy); }
+
+    /* ✏️ แก้ได้: หน้าเมนูรวม (ทางเข้าแอดมิน/บันทึกงาน) — การ์ดเดียวกับ adminSection/noteSection */
+    #menuSection {
+      display: none;
+      margin: 16px auto 0;
+      max-width: 340px;
+    }
+    .menuLinkBtn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 20px; margin: 6px 0; border-radius: 12px;
+      background: var(--navy); color: white; font-size: 16px; font-weight: 600;
+      text-decoration: none; box-sizing: border-box;
+    }
+    .menuLinkBtn svg { width: 19px; height: 19px; flex-shrink: 0; }
+
+    #adminAccessDenied { text-align: center; padding: 12px 0; font-weight: 600; color: #ef4444; }
+
+    /* ✏️ แก้ได้: แถวแสดงข้อมูลแบบอ่านอย่างเดียว ในแท็บ "ดูข้อมูลพนักงาน" */
+    .teamViewRow {
+      display: flex; justify-content: space-between; gap: 10px;
+      padding: 9px 0; border-bottom: 1px solid #eee; font-size: 14px;
+    }
+    .teamViewLabel { color: var(--text-muted); font-weight: 600; }
+    .teamViewValue { color: var(--text-dark); text-align: right; }
+
+    /* ✏️ แก้ได้: ข้อความชื่อผู้พัฒนาท้ายหน้า */
+    .credit {
+      margin-top: 18px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-card">
+    <!--
+      ✏️ แก้ได้: โลโก้บริษัท
+      ไฟล์โลโก้ที่ใช้อยู่: "logo.jpg" (Posteck Prestressing Co.,Ltd.)
+      วิธีเปลี่ยนโลโก้ในอนาคต:
+      1. อัปโหลดไฟล์รูปโลโก้ใหม่ขึ้น GitHub repo เดียวกับไฟล์นี้ (แนะนำตั้งชื่อ "logo.jpg" หรือ "logo.png" ทับไฟล์เดิม)
+      2. ถ้าเปลี่ยนชื่อไฟล์ ต้องแก้ src="logo.jpg" ด้านล่างนี้ให้ตรงกับชื่อไฟล์ใหม่ด้วย
+      3. ถ้าไฟล์โลโก้หาย/ไม่มี จะไม่ขึ้นรูป (ไม่ error) เพราะมี onerror ซ่อนไว้ให้
+    -->
+    <div class="header-row">
+      <img src="logo.jpg" alt="Posteck Prestressing Co.,Ltd." class="company-logo"
+           onerror="this.style.display='none'">
+      <div class="header-text">
+        <!-- ✏️ แก้ได้: หัวข้อหลักของหน้า -->
+        <div id="pageTitle">บันทึกเวลา Operation Team</div>
+        <h3 id="greeting">กำลังโหลด...</h3>
+      </div>
+    </div>
+
+    <!-- ✏️ แก้ได้: นาฬิกาเวลาปัจจุบัน อัปเดตอัตโนมัติทุกวินาที (ดูฟังก์ชัน startLiveClock ในสคริปต์ด้านล่าง) -->
+    <div id="liveClock">--:--:--</div>
+    <div id="liveDate"></div>
+
+    <!-- ส่วนลงเวลาเข้า-ออกงาน (มีกล้อง) -->
+    <div id="checkinSection" style="display:none;">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <div>
+        <button id="btnIn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          ลงเวลาเข้างาน
+        </button>
+        <button id="btnOut">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          ลงเวลาออกงาน
+        </button>
+      </div>
+    </div>
+
+    <!-- ส่วนขอ OT (ไม่มีกล้อง) -->
+    <div id="otForm">
+      <label>วันที่ต้องการขอ OT</label>
+      <input type="date" id="otDate">
+
+      <!-- ✏️ แก้ได้: ข้อความ checkbox 2 ช่อง (ซ้าย = ก่อนเข้างาน / ขวา = หลังเลิกงาน) -->
+      <div class="otTypeRow">
+        <label class="otCheckboxLabel" id="otBeforeLabel">
+          <input type="checkbox" id="otBeforeCheck">
+          <span>เข้างานก่อนเวลางาน</span>
+        </label>
+        <label class="otCheckboxLabel" id="otAfterLabel">
+          <input type="checkbox" id="otAfterCheck">
+          <span>เลิกงานช้ากว่าเวลางาน</span>
+        </label>
+      </div>
+
+      <!-- ✏️ แก้ได้: กล่องชั่วโมง/นาที "ก่อนเข้างาน" — โชว์เฉพาะตอนติ๊กช่องซ้ายด้านบน -->
+      <div class="hoursMinutesRow otTimeRow" id="otBeforeRow" style="display:none;">
+        <div>
+          <label>ชั่วโมง (ก่อนเข้างาน)</label>
+          <select id="otBeforeHours"></select>
+        </div>
+        <div>
+          <label>นาที (ก่อนเข้างาน)</label>
+          <select id="otBeforeMinutes"></select>
+        </div>
+      </div>
+
+      <!-- ✏️ แก้ได้: กล่องชั่วโมง/นาที "หลังเลิกงาน" — โชว์เฉพาะตอนติ๊กช่องขวาด้านบน -->
+      <div class="hoursMinutesRow otTimeRow" id="otAfterRow" style="display:none;">
+        <div>
+          <label>ชั่วโมง (หลังเลิกงาน)</label>
+          <select id="otAfterHours"></select>
+        </div>
+        <div>
+          <label>นาที (หลังเลิกงาน)</label>
+          <select id="otAfterMinutes"></select>
+        </div>
+      </div>
+
+      <label>เหตุผล</label>
+      <textarea id="otReason" rows="3"></textarea>
+
+      <button id="btnSubmitOt">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        ส่งคำขออนุมัติ
+      </button>
+    </div>
+
+    <!-- หน้าเมนูรวม (?type=menu) — ทางเข้าไปแอดมิน/บันทึกงาน ไม่ต้องเพิ่มปุ่มใน Rich Menu หลายปุ่ม -->
+    <div id="menuSection">
+      <a class="menuLinkBtn" href="?type=team">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        ข้อมูลทีม
+      </a>
+      <a class="menuLinkBtn" href="?type=admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17V7"/><path d="M15 17v-4"/><path d="M3 17h18"/><path d="M3 7l6-4 6 4 6-4"/></svg>
+        แอดมิน
+      </a>
+      <a class="menuLinkBtn" href="?type=note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        บันทึกงาน
+      </a>
+    </div>
+
+    <!-- หน้าแอดมิน (?type=admin) — export Excel + ตั้งค่าชื่อเล่น/ดูโน้ตงาน -->
+    <div id="adminSection">
+      <div id="adminAccessDenied" style="display:none;">🔒 เฉพาะผู้ดูแลระบบเท่านั้น</div>
+      <div id="adminPanel" style="display:none;">
+        <!-- ✏️ แก้ได้: ปุ่มนี้ช่วยให้ดาวน์โหลดไฟล์ Excel เสถียรกว่า เพราะ LINE in-app browser
+             บางเครื่องไม่โชว์การแจ้งเตือนดาวน์โหลดให้เห็นชัด -->
+        <button type="button" id="btnOpenExternal" style="background:#6b6b85; margin-bottom:10px;">
+          🌐 เปิดหน้านี้ในเบราว์เซอร์ภายนอก (ดาวน์โหลดไฟล์ได้เสถียรกว่า)
+        </button>
+
+        <div class="adminTabs">
+          <button type="button" class="adminTabBtn active" data-tab="export">📊 รายงาน Excel</button>
+          <button type="button" class="adminTabBtn" data-tab="notes">📝 โน้ตงาน</button>
+        </div>
+
+        <div id="adminTabExport" class="adminTabContent">
+          <label>เลือกพนักงาน</label>
+          <select id="exportEmployeeSelect"></select>
+          <label>เลือกเดือน</label>
+          <input type="month" id="exportMonthInput">
+          <button id="btnExportExcel">ดาวน์โหลด Excel</button>
+        </div>
+
+        <!-- ✏️ แก้ได้: แอดมินกรอก/แก้โน้ตงานของพนักงานคนไหนก็ได้ วันไหนก็ได้ -->
+        <div id="adminTabNotes" class="adminTabContent" style="display:none;">
+          <label>เลือกพนักงาน</label>
+          <select id="notesEmployeeSelect"></select>
+          <label>วันที่</label>
+          <input type="date" id="adminNoteDate">
+          <label>บันทึกงานวันนี้</label>
+          <textarea id="adminNoteText" rows="4" placeholder="วันนี้ทำงานอะไรบ้าง..."></textarea>
+          <button id="btnSaveAdminNote">บันทึกโน้ต</button>
+
+          <label>ดูโน้ตย้อนหลัง (รายเดือน)</label>
+          <input type="month" id="settingsMonthInput">
+          <button id="btnLoadNotes" type="button">โหลดโน้ตงาน</button>
+          <div id="notesListView"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- หน้าบันทึกงานประจำวัน (?type=note) — พนักงานกรอกของตัวเองได้ -->
+    <div id="noteSection">
+      <label>วันที่</label>
+      <input type="date" id="noteDate">
+      <label>บันทึกงานวันนี้</label>
+      <textarea id="noteText" rows="5" placeholder="วันนี้ทำงานอะไรบ้าง..."></textarea>
+      <button id="btnSaveNote">บันทึก</button>
+    </div>
+
+    <!-- หน้าข้อมูลทีม (?type=team) — แอดมินแก้ไขได้ทุกคน / พนักงานดูของตัวเองอย่างเดียว -->
+    <div id="teamSection">
+      <!-- แถบแท็บ โชว์เฉพาะแอดมิน (พนักงานทั่วไปเห็นแค่แท็บดูข้อมูลของตัวเอง ไม่ต้องมีแท็บให้เลือก) -->
+      <div id="teamAdminTabs" class="adminTabs" style="display:none;">
+        <button type="button" class="adminTabBtn active" data-tab="edit">📝 กรอกข้อมูล</button>
+        <button type="button" class="adminTabBtn" data-tab="view">👁️ ดูข้อมูลพนักงาน</button>
+      </div>
+
+      <!-- แท็บกรอกข้อมูล (แอดมินเท่านั้นที่เข้าถึงได้) -->
+      <div id="teamTabEdit" class="adminTabContent">
+        <label>เลือกพนักงาน</label>
+        <select id="teamEditEmployeeSelect"></select>
+
+        <label>ชื่อเล่น</label>
+        <input type="text" id="teamNickname" placeholder="เช่น พี่เอ, น้องบี">
+        <label>ชื่อ-นามสกุลจริง</label>
+        <input type="text" id="teamFullName">
+        <label>เบอร์โทร</label>
+        <input type="text" id="teamPhone">
+        <label>Email</label>
+        <input type="email" id="teamEmail">
+        <label>วันเข้าทำงาน</label>
+        <input type="date" id="teamStartDate">
+        <div id="teamTenureView" style="margin-top:6px; font-size:13px; color:var(--text-muted);"></div>
+
+        <label>ลาป่วย (วัน)</label>
+        <input type="number" id="teamSickLeave" min="0">
+        <label>ลากิจ (วัน)</label>
+        <input type="number" id="teamPersonalLeave" min="0">
+        <label>ลาพักร้อน (วัน)</label>
+        <input type="number" id="teamVacationLeave" min="0">
+        <label>จำนวนใบเตือน</label>
+        <input type="number" id="teamWarningCount" min="0">
+
+        <div id="teamStatsView" style="margin-top:14px; padding:10px; border-radius:8px; background:rgba(0,0,51,0.04); font-size:13px;"></div>
+
+        <button id="btnSaveTeamProfile">บันทึกข้อมูล</button>
+      </div>
+
+      <!-- แท็บดูข้อมูลพนักงาน — ทุกคนเข้าถึงได้ แต่พนักงานทั่วไปดูได้แค่ของตัวเอง (ไม่มี dropdown เลือกคนอื่น) -->
+      <div id="teamTabView" class="adminTabContent" style="display:none;">
+        <div id="teamViewEmployeePickerWrap" style="display:none;">
+          <label>เลือกพนักงาน</label>
+          <select id="teamViewEmployeeSelect"></select>
+        </div>
+        <div id="teamViewDisplay"></div>
+      </div>
+    </div>
+
+    <p id="status"></p>
+
+    <!-- ✏️ แก้ได้: ชื่อผู้พัฒนา/เครดิตท้ายหน้า -->
+    <div class="credit">Developed by Rachanon Nakmai</div>
+  </div>
+
+  <script>
+    let profile;
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzmhEfYXveNUNZ8bzr45i_7LV0niSEWRm89X6aRtIAoFF7FOJgE-b2Tb647fBKIDOga/exec";
+
+    // ✏️ แก้ได้: รูปแบบวันที่/เวลาที่แสดง หรือเปลี่ยนความถี่การอัปเดต (ปัจจุบันทุก 1 วินาที)
+    function startLiveClock() {
+      const clockEl = document.getElementById("liveClock");
+      const dateEl = document.getElementById("liveDate");
+      const weekdays = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+
+      function tick() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const ss = String(now.getSeconds()).padStart(2, "0");
+        // ✏️ แก้ได้: ห่อ : ด้วย <span class="clock-colon"> เพื่อให้กระพริบได้ (ดู CSS @keyframes blinkColon)
+        clockEl.innerHTML = `${hh}<span class="clock-colon">:</span>${mm}<span class="clock-colon">:</span>${ss}`;
+        dateEl.textContent = `วัน${weekdays[now.getDay()]} ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear() + 543}`;
+      }
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    // ✏️ แก้ได้: ช่วงตัวเลขของ dropdown ชั่วโมง/นาที ในฟอร์มขอ OT
+    function fillSelectRange(selectEl, max) {
+      for (let i = 0; i <= max; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = i;
+        selectEl.appendChild(opt);
+      }
+    }
+
+    function populateHourMinuteSelects() {
+      fillSelectRange(document.getElementById("otBeforeHours"), 23);
+      fillSelectRange(document.getElementById("otBeforeMinutes"), 59);
+      fillSelectRange(document.getElementById("otAfterHours"), 23);
+      fillSelectRange(document.getElementById("otAfterMinutes"), 59);
+    }
+
+    // ✏️ แก้ได้: พฤติกรรมตอนติ๊ก/ไม่ติ๊ก checkbox — โชว์/ซ่อนกล่องชั่วโมงนาทีที่เกี่ยวข้อง
+    function setupOtToggle(checkboxId, rowId, labelId) {
+      const checkbox = document.getElementById(checkboxId);
+      const row = document.getElementById(rowId);
+      const label = document.getElementById(labelId);
+      checkbox.addEventListener("change", () => {
+        row.style.display = checkbox.checked ? "flex" : "none";
+        label.classList.toggle("active", checkbox.checked);
+      });
+    }
+
+    // ✏️ แก้ได้ลอยๆ ไม่ได้: helper กลางสำหรับเรียก backend (ใช้ทั้งหน้าแอดมินและหน้าโน้ตงาน)
+    // รวม timeout + error handling ไว้ที่เดียว ไม่ต้องเขียนซ้ำทุกจุดเหมือน submitCheckin/submitOtRequest เดิม
+    async function callBackend(payload) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      let res;
+      try {
+        res = await fetch(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw new Error(err.name === "AbortError" ? "หมดเวลารอ (20 วินาที) — เซิร์ฟเวอร์อาจไม่ตอบสนอง" : err.message);
+      }
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const bodyText = await res.text();
+        throw new Error(`เซิร์ฟเวอร์ตอบกลับ HTTP ${res.status}\n${bodyText.slice(0, 200)}`);
+      }
+      let result;
+      try {
+        result = await res.json();
+      } catch (parseErr) {
+        throw new Error("อ่านผลลัพธ์จากเซิร์ฟเวอร์ไม่ได้ (ไม่ใช่ JSON) — เช็คว่า WEBAPP_URL ถูกต้องและ deploy ล่าสุดหรือไม่");
+      }
+      if (result.error) throw new Error(result.error);
+      return result;
+    }
+
+    function showStatus(text, isError) {
+      const el = document.getElementById("status");
+      el.innerText = text;
+      el.style.color = isError ? "#ef4444" : "";
+    }
+
+    function downloadBase64File(base64, filename) {
+      const link = document.createElement("a");
+      link.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + base64;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ===== หน้าแอดมิน (?type=admin) =====
+    let employeesCache = [];
+
+    async function initAdminPage() {
+      document.getElementById("adminSection").style.display = "block";
+      try {
+        const check = await callBackend({ action: "check_admin", lineUserId: profile.userId });
+        if (!check.isAdmin) {
+          document.getElementById("adminAccessDenied").style.display = "block";
+          return;
+        }
+        document.getElementById("adminPanel").style.display = "block";
+        setupAdminTabs();
+        await loadEmployeesForAdmin();
+
+        const now = new Date();
+        const monthDefault = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        document.getElementById("exportMonthInput").value = monthDefault;
+        document.getElementById("settingsMonthInput").value = monthDefault;
+        document.getElementById("adminNoteDate").value = formatDateForInput(now);
+
+        document.getElementById("btnExportExcel").onclick = handleExportClick;
+        document.getElementById("btnSaveAdminNote").onclick = handleSaveAdminNoteClick;
+        document.getElementById("btnLoadNotes").onclick = handleLoadNotesClick;
+        document.getElementById("adminNoteDate").onchange = loadAdminNoteForSelectedEmployee;
+        // ✏️ แก้ได้: เปิดหน้าปัจจุบันซ้ำในเบราว์เซอร์นอก LINE (Chrome/Safari) ให้ดาวน์โหลดไฟล์ได้เสถียรกว่า
+        document.getElementById("btnOpenExternal").onclick = () => {
+          liff.openWindow({ url: location.href, external: true });
+        };
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    function setupAdminTabs() {
+      document.querySelectorAll(".adminTabBtn").forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll(".adminTabBtn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("adminTabExport").style.display = btn.dataset.tab === "export" ? "block" : "none";
+          document.getElementById("adminTabNotes").style.display = btn.dataset.tab === "notes" ? "block" : "none";
+        };
+      });
+    }
+
+    // ✏️ แก้ได้: รูปแบบ label ใน dropdown เลือกพนักงาน เช่น "ชื่อเล่น (ชื่อจริง)"
+    async function loadEmployeesForAdmin() {
+      const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
+      employeesCache = result.employees || [];
+
+      const exportSelect = document.getElementById("exportEmployeeSelect");
+      const notesSelect = document.getElementById("notesEmployeeSelect");
+      const prevNotesValue = notesSelect.value;
+
+      exportSelect.innerHTML = '<option value="ALL">ทั้งหมดทุกคน</option>';
+      notesSelect.innerHTML = "";
+      employeesCache.forEach(emp => {
+        const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+        const opt1 = document.createElement("option");
+        opt1.value = emp.lineUserId; opt1.textContent = label;
+        exportSelect.appendChild(opt1);
+        const opt2 = document.createElement("option");
+        opt2.value = emp.lineUserId; opt2.textContent = label;
+        notesSelect.appendChild(opt2);
+      });
+
+      notesSelect.onchange = () => {
+        document.getElementById("notesListView").innerHTML = "";
+        loadAdminNoteForSelectedEmployee();
+      };
+      if (prevNotesValue && employeesCache.some(e => e.lineUserId === prevNotesValue)) {
+        notesSelect.value = prevNotesValue;
+      }
+      if (employeesCache.length > 0) notesSelect.onchange();
+    }
+
+    async function handleExportClick() {
+      const btn = document.getElementById("btnExportExcel");
+      btn.disabled = true;
+      showStatus("กำลังสร้างไฟล์ Excel...", false);
+      try {
+        const result = await callBackend({
+          action: "export_excel",
+          lineUserId: profile.userId,
+          targetLineUserId: document.getElementById("exportEmployeeSelect").value,
+          monthStr: document.getElementById("exportMonthInput").value
+        });
+        downloadBase64File(result.base64, result.filename);
+        showStatus("✅ ดาวน์โหลดไฟล์แล้ว: " + result.filename, false);
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+      btn.disabled = false;
+    }
+
+    // แอดมินกรอก/แก้โน้ตงานแทนพนักงานคนที่เลือกไว้ วันที่เลือกไว้
+    async function loadAdminNoteForSelectedEmployee() {
+      const targetId = document.getElementById("notesEmployeeSelect").value;
+      const date = document.getElementById("adminNoteDate").value;
+      if (!targetId || !date) return;
+      document.getElementById("adminNoteText").value = "กำลังโหลด...";
+      try {
+        const result = await callBackend({
+          action: "get_note", lineUserId: profile.userId, targetLineUserId: targetId, date: date
+        });
+        document.getElementById("adminNoteText").value = result.note || "";
+      } catch (err) {
+        document.getElementById("adminNoteText").value = "";
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    async function handleSaveAdminNoteClick() {
+      const targetId = document.getElementById("notesEmployeeSelect").value;
+      const emp = employeesCache.find(e => e.lineUserId === targetId);
+      const date = document.getElementById("adminNoteDate").value;
+      const note = document.getElementById("adminNoteText").value;
+      try {
+        const result = await callBackend({
+          action: "save_note", lineUserId: profile.userId, targetLineUserId: targetId,
+          name: emp ? emp.name : "", date: date, note: note
+        });
+        showStatus("✅ " + result.message, false);
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    async function handleLoadNotesClick() {
+      const targetId = document.getElementById("notesEmployeeSelect").value;
+      const monthStr = document.getElementById("settingsMonthInput").value;
+      const view = document.getElementById("notesListView");
+      view.innerHTML = "กำลังโหลด...";
+      try {
+        const result = await callBackend({
+          action: "get_notes_admin", lineUserId: profile.userId,
+          targetLineUserId: targetId, monthStr: monthStr
+        });
+        const notes = result.notes || [];
+        if (notes.length === 0) {
+          view.innerHTML = "<p>ไม่มีบันทึกงานในเดือนนี้</p>";
+          return;
+        }
+        // ✏️ escape ข้อความโน้ตกัน HTML แปลกๆ หลุดเข้ามาแสดงผลผิด
+        view.innerHTML = notes.map(n =>
+          `<div class="noteRow"><div class="noteDate">${n.date}</div><div>${(n.note || "").replace(/</g, "&lt;")}</div></div>`
+        ).join("");
+      } catch (err) {
+        view.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
+    }
+
+    // ===== หน้าบันทึกงานประจำวัน (?type=note) =====
+    function formatDateForInput(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    async function initNotePage() {
+      document.getElementById("noteSection").style.display = "block";
+      document.getElementById("noteDate").value = formatDateForInput(new Date());
+      document.getElementById("noteDate").onchange = loadNoteForDate;
+      document.getElementById("btnSaveNote").onclick = saveNoteForDate;
+      await loadNoteForDate();
+    }
+
+    async function loadNoteForDate() {
+      const date = document.getElementById("noteDate").value;
+      document.getElementById("noteText").value = "กำลังโหลด...";
+      try {
+        const result = await callBackend({ action: "get_note", lineUserId: profile.userId, date: date });
+        document.getElementById("noteText").value = result.note || "";
+      } catch (err) {
+        document.getElementById("noteText").value = "";
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    async function saveNoteForDate() {
+      const date = document.getElementById("noteDate").value;
+      const note = document.getElementById("noteText").value;
+      try {
+        const result = await callBackend({
+          action: "save_note", lineUserId: profile.userId, name: profile.displayName, date: date, note: note
+        });
+        showStatus("✅ " + result.message, false);
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    // ===== หน้าข้อมูลทีม (?type=team) =====
+    // แอดมิน: เห็น 2 แท็บ — "กรอกข้อมูล" (แก้ไขได้ทุกคน) และ "ดูข้อมูลพนักงาน" (ดูของใครก็ได้)
+    // พนักงานทั่วไป: ไม่มีแท็บให้เลือก เห็นแค่มุมมอง "ดูข้อมูล" ของตัวเองอย่างเดียว อ่านอย่างเดียว
+    let teamIsAdmin = false;
+    let teamEmployeesCache = [];
+
+    async function initTeamPage() {
+      document.getElementById("teamSection").style.display = "block";
+      try {
+        const check = await callBackend({ action: "check_admin", lineUserId: profile.userId });
+        teamIsAdmin = check.isAdmin;
+
+        if (teamIsAdmin) {
+          document.getElementById("teamAdminTabs").style.display = "flex";
+          document.getElementById("teamViewEmployeePickerWrap").style.display = "block";
+          setupTeamTabs();
+
+          const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
+          teamEmployeesCache = result.employees || [];
+
+          const editSelect = document.getElementById("teamEditEmployeeSelect");
+          const viewSelect = document.getElementById("teamViewEmployeeSelect");
+          editSelect.innerHTML = ""; viewSelect.innerHTML = "";
+          teamEmployeesCache.forEach(emp => {
+            const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+            const opt1 = document.createElement("option"); opt1.value = emp.lineUserId; opt1.textContent = label;
+            editSelect.appendChild(opt1);
+            const opt2 = document.createElement("option"); opt2.value = emp.lineUserId; opt2.textContent = label;
+            viewSelect.appendChild(opt2);
+          });
+
+          editSelect.onchange = () => loadTeamProfileIntoForm(editSelect.value);
+          viewSelect.onchange = () => loadTeamProfileIntoView(viewSelect.value);
+          document.getElementById("btnSaveTeamProfile").onclick = saveTeamProfile;
+
+          if (teamEmployeesCache.length > 0) {
+            editSelect.value = teamEmployeesCache[0].lineUserId;
+            viewSelect.value = teamEmployeesCache[0].lineUserId;
+            await loadTeamProfileIntoForm(editSelect.value);
+            await loadTeamProfileIntoView(viewSelect.value);
+          }
+        } else {
+          // พนักงานทั่วไป: ไม่มีแท็บ ไม่มี dropdown เห็นแค่ข้อมูลของตัวเองแบบอ่านอย่างเดียว
+          document.getElementById("teamTabEdit").style.display = "none";
+          document.getElementById("teamTabView").style.display = "block";
+          await loadTeamProfileIntoView(profile.userId);
+        }
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    function setupTeamTabs() {
+      document.querySelectorAll("#teamAdminTabs .adminTabBtn").forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll("#teamAdminTabs .adminTabBtn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("teamTabEdit").style.display = btn.dataset.tab === "edit" ? "block" : "none";
+          document.getElementById("teamTabView").style.display = btn.dataset.tab === "view" ? "block" : "none";
+        };
+      });
+    }
+
+    // โหลดข้อมูลใส่ "แท็บกรอกข้อมูล" (ช่องกรอกที่แก้ไขได้)
+    async function loadTeamProfileIntoForm(targetLineUserId) {
+      showStatus("กำลังโหลดข้อมูล...", false);
+      try {
+        const p = await callBackend({
+          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId
+        });
+        document.getElementById("teamNickname").value = p.nickname || "";
+        document.getElementById("teamFullName").value = p.fullName || "";
+        document.getElementById("teamPhone").value = p.phone || "";
+        document.getElementById("teamEmail").value = p.email || "";
+        document.getElementById("teamStartDate").value = p.startDate || "";
+        document.getElementById("teamSickLeave").value = p.sickLeave || 0;
+        document.getElementById("teamPersonalLeave").value = p.personalLeave || 0;
+        document.getElementById("teamVacationLeave").value = p.vacationLeave || 0;
+        document.getElementById("teamWarningCount").value = p.warningCount || 0;
+        document.getElementById("teamTenureView").textContent = `อายุงาน: ${p.tenureText}`;
+        // ✏️ แก้ได้: ข้อความสรุปสถิติสาย/ขาดงาน (สะสมทั้งหมดตั้งแต่เริ่มงาน ไม่ใช่รายเดือน)
+        document.getElementById("teamStatsView").innerHTML =
+          `📊 สถิติสะสมทั้งหมด<br>สาย: ${p.lateCount} ครั้ง &nbsp;|&nbsp; ขาดงาน (สาย 3 = ขาด 1): ${p.absenceFromLate} ครั้ง`;
+        showStatus("", false);
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    // ✏️ แก้ได้: escape ข้อความกัน HTML แปลกๆ หลุดเข้ามาแสดงผลผิด
+    function escapeHtml(s) {
+      return (s || "").toString().replace(/</g, "&lt;");
+    }
+
+    // โหลดข้อมูลใส่ "แท็บดูข้อมูลพนักงาน" (แสดงผลอย่างเดียว แก้ไขไม่ได้)
+    async function loadTeamProfileIntoView(targetLineUserId) {
+      const el = document.getElementById("teamViewDisplay");
+      el.innerHTML = "กำลังโหลด...";
+      try {
+        const p = await callBackend({
+          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId
+        });
+        const rows = [
+          ["ชื่อเล่น", p.nickname || "-"],
+          ["ชื่อ-นามสกุลจริง", p.fullName || "-"],
+          ["เบอร์โทร", p.phone || "-"],
+          ["Email", p.email || "-"],
+          ["วันเข้าทำงาน", p.startDate || "-"],
+          ["อายุงาน", p.tenureText],
+          ["ลาป่วย", `${p.sickLeave || 0} วัน`],
+          ["ลากิจ", `${p.personalLeave || 0} วัน`],
+          ["ลาพักร้อน", `${p.vacationLeave || 0} วัน`],
+          ["จำนวนใบเตือน", `${p.warningCount || 0} ใบ`],
+          ["สาย (สะสม)", `${p.lateCount} ครั้ง`],
+          ["ขาดงาน (สาย 3 = ขาด 1)", `${p.absenceFromLate} ครั้ง`]
+        ];
+        el.innerHTML = rows.map(([label, value]) =>
+          `<div class="teamViewRow"><span class="teamViewLabel">${label}</span><span class="teamViewValue">${escapeHtml(String(value))}</span></div>`
+        ).join("");
+      } catch (err) {
+        el.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
+    }
+
+    async function saveTeamProfile() {
+      const targetId = document.getElementById("teamEditEmployeeSelect").value;
+      try {
+        const result = await callBackend({
+          action: "save_team_profile", lineUserId: profile.userId, targetLineUserId: targetId,
+          nickname: document.getElementById("teamNickname").value.trim(),
+          fullName: document.getElementById("teamFullName").value.trim(),
+          phone: document.getElementById("teamPhone").value.trim(),
+          email: document.getElementById("teamEmail").value.trim(),
+          startDate: document.getElementById("teamStartDate").value,
+          sickLeave: document.getElementById("teamSickLeave").value,
+          personalLeave: document.getElementById("teamPersonalLeave").value,
+          vacationLeave: document.getElementById("teamVacationLeave").value,
+          warningCount: document.getElementById("teamWarningCount").value
+        });
+        showStatus("✅ " + result.message, false);
+        await loadTeamProfileIntoForm(targetId); // โหลดใหม่เพื่ออัปเดตอายุงาน/สถิติให้ตรงกับข้อมูลล่าสุด
+        // ✏️ อัปเดตรายชื่อ dropdown ทั้งสองแท็บให้ label ตรงกับชื่อเล่นล่าสุดด้วย (เผื่อเพิ่งแก้ชื่อเล่น)
+        await initTeamPage();
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    async function main() {
+      startLiveClock();
+      const g = document.getElementById("greeting");
+      try {
+        await liff.init({ liffId: "2010715816-1iuufSxz" });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+
+        profile = await liff.getProfile();
+        g.innerText = `สวัสดีคุณ ${profile.displayName}`;
+
+        const params = new URLSearchParams(location.search);
+        const pageType = params.get("type");
+
+        if (pageType === "ot") {
+          // หน้าขอ OT: ไม่ต้องเปิดกล้องเลย
+          populateHourMinuteSelects();
+          setupOtToggle("otBeforeCheck", "otBeforeRow", "otBeforeLabel");
+          setupOtToggle("otAfterCheck", "otAfterRow", "otAfterLabel");
+          document.getElementById("otForm").style.display = "block";
+          document.getElementById("btnSubmitOt").onclick = submitOtRequest;
+        } else if (pageType === "admin") {
+          // หน้าแอดมิน: ไม่ต้องเปิดกล้อง เช็คสิทธิ์จาก LINE User ID ก่อนแสดงผล
+          await initAdminPage();
+        } else if (pageType === "note") {
+          // หน้าบันทึกงานประจำวัน: ไม่ต้องเปิดกล้อง พนักงานกรอกของตัวเองได้
+          await initNotePage();
+        } else if (pageType === "menu") {
+          // หน้าเมนูรวม: แค่โชว์ปุ่มลิงก์ไปแอดมิน/บันทึกงาน/ข้อมูลทีม ไม่ต้องเรียก backend อะไร
+          document.getElementById("menuSection").style.display = "block";
+        } else if (pageType === "team") {
+          // หน้าข้อมูลทีม: ไม่ต้องเปิดกล้อง
+          await initTeamPage();
+        } else {
+          // หน้าลงเวลาเข้า-ออกงาน: เปิดกล้องตามปกติ
+          document.getElementById("checkinSection").style.display = "block";
+
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+          document.getElementById("video").srcObject = stream;
+
+          if (pageType === "in") document.getElementById("btnOut").style.display = "none";
+          if (pageType === "out") document.getElementById("btnIn").style.display = "none";
+
+          document.getElementById("btnIn").onclick = () => submitCheckin("in");
+          document.getElementById("btnOut").onclick = () => submitCheckin("out");
+        }
+      } catch (err) {
+        g.innerText = "❌ Error: " + err.message;
+      }
+    }
+
+    function captureSelfie() {
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      return canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
+    }
+
+    function submitCheckin(type) {
+      const selfieBase64 = captureSelfie();
+
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      video.style.display = "none";
+      canvas.style.display = "block";
+      canvas.style.width = "100%";
+      canvas.style.maxWidth = "320px";
+      canvas.style.borderRadius = "8px";
+
+      document.getElementById("status").innerText = "📸 ถ่ายภาพแล้ว กำลังหาตำแหน่ง...";
+
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        document.getElementById("status").innerText = "📤 กำลังส่งข้อมูล...";
+        try {
+          // ✏️ ตั้ง timeout 20 วินาที กันค้างตลอดไปถ้าเซิร์ฟเวอร์ไม่ตอบเลย
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+          const res = await fetch(WEBAPP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+              name: profile.displayName,
+              lineUserId: profile.userId,
+              type: type,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              selfieBase64: selfieBase64
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            // เซิร์ฟเวอร์ตอบกลับมาแต่ status ไม่ใช่ 200 (เช่น 404, 500)
+            const bodyText = await res.text();
+            throw new Error(`เซิร์ฟเวอร์ตอบกลับ HTTP ${res.status}\n${bodyText.slice(0, 200)}`);
+          }
+
+          let result;
+          try {
+            result = await res.json();
+          } catch (parseErr) {
+            // ตอบกลับมาแล้วแต่ไม่ใช่ JSON ที่ parse ได้ (เช่น Apps Script ส่งหน้า HTML error กลับมา)
+            throw new Error("อ่านผลลัพธ์จากเซิร์ฟเวอร์ไม่ได้ (ไม่ใช่ JSON) — เช็คว่า WEBAPP_URL ถูกต้องและ deploy ล่าสุดหรือไม่");
+          }
+
+          document.getElementById("status").innerText = result.message;
+          setTimeout(() => liff.closeWindow(), 2500);
+
+        } catch (err) {
+          // ครอบคลุมทุกกรณี: network error, CORS, timeout, URL ผิด, ฯลฯ
+          const reason = err.name === "AbortError"
+            ? "หมดเวลารอ (20 วินาที) — เซิร์ฟเวอร์อาจไม่ตอบสนอง"
+            : err.message;
+          document.getElementById("status").innerText = `❌ ส่งข้อมูลไม่สำเร็จ\n${reason}`;
+          document.getElementById("status").style.color = "#ef4444";
+          console.error("submitCheckin error:", err);
+        }
+      }, () => {
+        alert("กรุณาเปิดสิทธิ์เข้าถึงตำแหน่ง GPS");
+        video.style.display = "block";
+        canvas.style.display = "none";
+      });
+    }
+
+    async function submitOtRequest() {
+      const date = document.getElementById("otDate").value;
+      const reason = document.getElementById("otReason").value;
+
+      const beforeChecked = document.getElementById("otBeforeCheck").checked;
+      const afterChecked = document.getElementById("otAfterCheck").checked;
+
+      if (!date || !reason) { alert("กรุณากรอกวันที่และเหตุผลให้ครบ"); return; }
+      if (!beforeChecked && !afterChecked) {
+        alert("กรุณาติ๊กเลือกอย่างน้อย 1 ช่อง (เข้างานก่อนเวลางาน หรือ เลิกงานช้ากว่าเวลางาน)");
+        return;
+      }
+
+      // ✏️ แก้ได้: รวมเวลาจากทั้ง 2 ช่วง (ก่อนเข้างาน + หลังเลิกงาน) เป็นยอด OT รวมก่อนส่งไป Apps Script
+      // ⚠️ ห้ามแก้ลอยๆ: backend (รหัส.gs) ยังรับแค่ "hours"/"minutes" รวมค่าเดียว ถ้าจะแยกเก็บ 2 ยอด ต้องแก้ Apps Script คู่กันด้วย
+      let totalMinutes = 0;
+      if (beforeChecked) {
+        totalMinutes += (parseInt(document.getElementById("otBeforeHours").value) || 0) * 60
+                      + (parseInt(document.getElementById("otBeforeMinutes").value) || 0);
+      }
+      if (afterChecked) {
+        totalMinutes += (parseInt(document.getElementById("otAfterHours").value) || 0) * 60
+                      + (parseInt(document.getElementById("otAfterMinutes").value) || 0);
+      }
+
+      if (totalMinutes === 0) {
+        alert("กรุณาระบุจำนวนชั่วโมงหรือนาทีอย่างน้อย 1 ค่าในช่องที่ติ๊กไว้");
+        return;
+      }
+
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      document.getElementById("status").innerText = "กำลังส่งคำขอ...";
+      document.getElementById("status").style.color = "";
+
+      try {
+        // ✏️ ตั้ง timeout 20 วินาที กันค้างตลอดไปถ้าเซิร์ฟเวอร์ไม่ตอบเลย
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        const res = await fetch(WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "ot_request",
+            lineUserId: profile.userId,
+            name: profile.displayName,
+            date: date,
+            hours: hours,
+            minutes: minutes,
+            reason: reason
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const bodyText = await res.text();
+          throw new Error(`เซิร์ฟเวอร์ตอบกลับ HTTP ${res.status}\n${bodyText.slice(0, 200)}`);
+        }
+
+        let result;
+        try {
+          result = await res.json();
+        } catch (parseErr) {
+          throw new Error("อ่านผลลัพธ์จากเซิร์ฟเวอร์ไม่ได้ (ไม่ใช่ JSON) — เช็คว่า WEBAPP_URL ถูกต้องและ deploy ล่าสุดหรือไม่");
+        }
+
+        document.getElementById("status").innerText = result.message;
+        setTimeout(() => liff.closeWindow(), 2500);
+
+      } catch (err) {
+        const reason = err.name === "AbortError"
+          ? "หมดเวลารอ (20 วินาที) — เซิร์ฟเวอร์อาจไม่ตอบสนอง"
+          : err.message;
+        document.getElementById("status").innerText = `❌ ส่งคำขอไม่สำเร็จ\n${reason}`;
+        document.getElementById("status").style.color = "#ef4444";
+        console.error("submitOtRequest error:", err);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
