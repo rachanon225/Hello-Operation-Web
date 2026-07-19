@@ -488,7 +488,12 @@
         <label>จำนวนใบเตือน</label>
         <input type="number" id="teamWarningCount" min="0">
 
-        <div id="teamStatsView" style="margin-top:14px; padding:10px; border-radius:8px; background:rgba(0,0,51,0.04); font-size:13px;"></div>
+        <div style="margin-top:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <label style="margin:0;">ดูสถิติสาย/ขาดงานเดือน:</label>
+          <input type="month" id="teamStatsMonthInput" style="width:auto;">
+          <button type="button" id="btnTeamStatsAllTime" style="width:auto; padding:6px 12px;">สะสมทั้งหมด</button>
+        </div>
+        <div id="teamStatsView" style="margin-top:10px; padding:10px; border-radius:8px; background:rgba(0,0,51,0.04); font-size:13px;"></div>
 
         <button id="btnSaveTeamProfile">บันทึกข้อมูล</button>
       </div>
@@ -498,6 +503,11 @@
         <div id="teamViewEmployeePickerWrap" style="display:none;">
           <label>เลือกพนักงาน</label>
           <select id="teamViewEmployeeSelect"></select>
+        </div>
+        <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <label style="margin:0;">ดูสถิติสาย/ขาดงานเดือน:</label>
+          <input type="month" id="teamViewMonthInput" style="width:auto;">
+          <button type="button" id="btnTeamViewAllTime" style="width:auto; padding:6px 12px;">สะสมทั้งหมด</button>
         </div>
         <div id="teamViewDisplay"></div>
       </div>
@@ -833,6 +843,18 @@
           viewSelect.onchange = () => loadTeamProfileIntoView(viewSelect.value);
           document.getElementById("btnSaveTeamProfile").onclick = saveTeamProfile;
 
+          // ✏️ ตัวเลือกเดือนสำหรับดูสถิติสาย/ขาดงานรายเดือน (ว่าง = สะสมทั้งหมดตั้งแต่เริ่มงาน)
+          document.getElementById("teamStatsMonthInput").onchange = () => loadTeamProfileIntoForm(editSelect.value);
+          document.getElementById("btnTeamStatsAllTime").onclick = () => {
+            document.getElementById("teamStatsMonthInput").value = "";
+            loadTeamProfileIntoForm(editSelect.value);
+          };
+          document.getElementById("teamViewMonthInput").onchange = () => loadTeamProfileIntoView(viewSelect.value);
+          document.getElementById("btnTeamViewAllTime").onclick = () => {
+            document.getElementById("teamViewMonthInput").value = "";
+            loadTeamProfileIntoView(viewSelect.value);
+          };
+
           if (teamEmployeesCache.length > 0) {
             editSelect.value = teamEmployeesCache[0].lineUserId;
             viewSelect.value = teamEmployeesCache[0].lineUserId;
@@ -843,6 +865,11 @@
           // พนักงานทั่วไป: ไม่มีแท็บ ไม่มี dropdown เห็นแค่ข้อมูลของตัวเองแบบอ่านอย่างเดียว
           document.getElementById("teamTabEdit").style.display = "none";
           document.getElementById("teamTabView").style.display = "block";
+          document.getElementById("teamViewMonthInput").onchange = () => loadTeamProfileIntoView(profile.userId);
+          document.getElementById("btnTeamViewAllTime").onclick = () => {
+            document.getElementById("teamViewMonthInput").value = "";
+            loadTeamProfileIntoView(profile.userId);
+          };
           await loadTeamProfileIntoView(profile.userId);
         }
       } catch (err) {
@@ -861,12 +888,20 @@
       });
     }
 
+    // ✏️ แก้ได้: แปลง "yyyy-MM" จาก <input type="month"> ให้เป็นข้อความอ่านง่าย เช่น "07/2026"
+    function formatMonthLabel(monthStr) {
+      if (!monthStr) return "";
+      const [y, m] = monthStr.split("-");
+      return `${m}/${y}`;
+    }
+
     // โหลดข้อมูลใส่ "แท็บกรอกข้อมูล" (ช่องกรอกที่แก้ไขได้)
     async function loadTeamProfileIntoForm(targetLineUserId) {
       showStatus("กำลังโหลดข้อมูล...", false);
       try {
+        const monthStr = document.getElementById("teamStatsMonthInput").value;
         const p = await callBackend({
-          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId
+          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId, month: monthStr
         });
         document.getElementById("teamNickname").value = p.nickname || "";
         document.getElementById("teamFullName").value = p.fullName || "";
@@ -878,9 +913,10 @@
         document.getElementById("teamVacationLeave").value = p.vacationLeave || 0;
         document.getElementById("teamWarningCount").value = p.warningCount || 0;
         document.getElementById("teamTenureView").textContent = `อายุงาน: ${p.tenureText}`;
-        // ✏️ แก้ได้: ข้อความสรุปสถิติสาย/ขาดงาน (สะสมทั้งหมดตั้งแต่เริ่มงาน ไม่ใช่รายเดือน)
+        // ✏️ แก้ได้: ข้อความสรุปสถิติสาย/ขาดงาน (สะสมทั้งหมด หรือเฉพาะเดือนที่เลือก แล้วแต่ teamStatsMonthInput)
+        const periodLabel = monthStr ? `เดือน ${formatMonthLabel(monthStr)}` : "สะสมทั้งหมด";
         document.getElementById("teamStatsView").innerHTML =
-          `📊 สถิติสะสมทั้งหมด<br>สาย: ${p.lateCount} ครั้ง &nbsp;|&nbsp; ขาดงาน (สาย 3 = ขาด 1): ${p.absenceFromLate} ครั้ง`;
+          `📊 สถิติ${periodLabel}<br>สาย: ${p.lateCount} ครั้ง &nbsp;|&nbsp; ขาดงาน (สาย 3 = ขาด 1): ${p.absenceFromLate} ครั้ง`;
         showStatus("", false);
       } catch (err) {
         showStatus("❌ " + err.message, true);
@@ -897,9 +933,11 @@
       const el = document.getElementById("teamViewDisplay");
       el.innerHTML = "กำลังโหลด...";
       try {
+        const monthStr = document.getElementById("teamViewMonthInput").value;
         const p = await callBackend({
-          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId
+          action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId, month: monthStr
         });
+        const periodLabel = monthStr ? `เดือน ${formatMonthLabel(monthStr)}` : "สะสม";
         const rows = [
           ["ชื่อเล่น", p.nickname || "-"],
           ["ชื่อ-นามสกุลจริง", p.fullName || "-"],
@@ -911,7 +949,7 @@
           ["ลากิจ", `${p.personalLeave || 0} วัน`],
           ["ลาพักร้อน", `${p.vacationLeave || 0} วัน`],
           ["จำนวนใบเตือน", `${p.warningCount || 0} ใบ`],
-          ["สาย (สะสม)", `${p.lateCount} ครั้ง`],
+          [`สาย (${periodLabel})`, `${p.lateCount} ครั้ง`],
           ["ขาดงาน (สาย 3 = ขาด 1)", `${p.absenceFromLate} ครั้ง`]
         ];
         el.innerHTML = rows.map(([label, value]) =>
