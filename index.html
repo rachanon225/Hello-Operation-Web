@@ -342,6 +342,12 @@
       </div>
     </div>
 
+    <!-- ✏️ แท็บสลับหน้าขอ OT — เห็นเฉพาะแอดมิน พนักงานทั่วไปไม่เห็นแท็บนี้เลย เข้าฟอร์มขอ OT ปกติตรงๆ -->
+    <div class="adminTabs" id="otAdminTabs" style="display:none;">
+      <button type="button" class="adminTabBtn active" data-tab="request">ขอ OT</button>
+      <button type="button" class="adminTabBtn" data-tab="special">🕐 บันทึก OT พิเศษ</button>
+    </div>
+
     <!-- ส่วนขอ OT (ไม่มีกล้อง) -->
     <div id="otForm">
       <label>วันที่ต้องการขอ OT</label>
@@ -390,6 +396,27 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
         ส่งคำขออนุมัติ
       </button>
+    </div>
+
+    <!-- ✏️ แท็บ "บันทึก OT พิเศษ" — เห็นเฉพาะแอดมิน สำหรับบันทึก OT วันหยุดประจำสัปดาห์ (WE) / วันหยุดพิเศษ (HL) แทนพนักงาน -->
+    <div id="otSpecialForm" style="display:none;">
+      <label>เลือกพนักงาน</label>
+      <select id="otSpecialEmployeeSelect"></select>
+
+      <label>วันที่ทำ OT</label>
+      <input type="date" id="otSpecialDate">
+
+      <label>ประเภท OT</label>
+      <select id="otSpecialType">
+        <option value="WE">วันหยุดประจำสัปดาห์ (เรทปกติ 1.50 / 1.25)</option>
+        <option value="HL">วันหยุดพิเศษ (เรท 2.00)</option>
+      </select>
+
+      <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">
+        * ระบบจะดึงชั่วโมง OT ที่มีอยู่แล้วของวันนั้นมาบวกเพิ่มอีก 8 ชม. ให้อัตโนมัติ และล้าง OT เดิมของวันนั้นออกกันนับซ้ำ
+      </div>
+
+      <button id="btnSubmitOtSpecial">บันทึก OT พิเศษ</button>
     </div>
 
     <!-- หน้าเมนูรวม (?type=menu) — ทางเข้าไปแอดมิน/บันทึกงาน ไม่ต้องเพิ่มปุ่มใน Rich Menu หลายปุ่ม -->
@@ -958,9 +985,13 @@
           [`สาย (${periodLabel})`, `${p.lateCount} ครั้ง`],
           ["ขาดงาน (สาย 3 = ขาด 1)", `${p.absenceFromLate} ครั้ง`]
         ];
-        // ชั่วโมง OT มีให้ดูเฉพาะตอนเลือกเดือนแล้วเท่านั้น (ไม่มีโหมดสะสมทั้งหมด)
-        if (monthStr && p.otHours !== null && p.otHours !== undefined) {
-          rows.push([`OT รวม (${periodLabel})`, `${p.otHours} ชม.`]);
+        // ชั่วโมง OT มีให้ดูเฉพาะตอนเลือกเดือนแล้วเท่านั้น (ไม่มีโหมดสะสมทั้งหมด) — แยกตามเรท 1.50/1.25/2.00
+        if (monthStr && p.otBreakdown) {
+          const b = p.otBreakdown;
+          const totalOt = Math.round((b.rate150 + b.rate125 + b.rate200) * 100) / 100;
+          rows.push([`OT รวม (${periodLabel})`, `${totalOt} ชม.`]);
+          rows.push([["1.50x", `${b.rate150} ชม.`], ["1.25x", `${b.rate125} ชม.`]]);
+          rows.push(["2.00x (วันหยุดพิเศษ)", `${b.rate200} ชม.`]);
         }
         el.innerHTML = rows.map(row => {
           if (Array.isArray(row[0])) {
@@ -1017,11 +1048,7 @@
 
         if (pageType === "ot") {
           // หน้าขอ OT: ไม่ต้องเปิดกล้องเลย
-          populateHourMinuteSelects();
-          setupOtToggle("otBeforeCheck", "otBeforeRow", "otBeforeLabel");
-          setupOtToggle("otAfterCheck", "otAfterRow", "otAfterLabel");
-          document.getElementById("otForm").style.display = "block";
-          document.getElementById("btnSubmitOt").onclick = submitOtRequest;
+          await initOtPage();
         } else if (pageType === "admin") {
           // หน้าแอดมิน: ไม่ต้องเปิดกล้อง เช็คสิทธิ์จาก LINE User ID ก่อนแสดงผล
           await initAdminPage();
@@ -1127,6 +1154,70 @@
         video.style.display = "block";
         canvas.style.display = "none";
       });
+    }
+
+    // ===== หน้าขอ OT (?type=ot) =====
+    // พนักงานทั่วไป: เห็นแค่ฟอร์มขอ OT ปกติ ไม่มีแท็บ
+    // แอดมิน: เห็นแท็บเพิ่ม "🕐 บันทึก OT พิเศษ" สำหรับบันทึก OT วันหยุด (WE/HL) แทนพนักงาน
+    async function initOtPage() {
+      populateHourMinuteSelects();
+      setupOtToggle("otBeforeCheck", "otBeforeRow", "otBeforeLabel");
+      setupOtToggle("otAfterCheck", "otAfterRow", "otAfterLabel");
+      document.getElementById("otForm").style.display = "block";
+      document.getElementById("btnSubmitOt").onclick = submitOtRequest;
+
+      try {
+        const check = await callBackend({ action: "check_admin", lineUserId: profile.userId });
+        if (!check.isAdmin) return;
+
+        document.getElementById("otAdminTabs").style.display = "flex";
+        setupOtAdminTabs();
+
+        const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
+        const employees = result.employees || [];
+        const sel = document.getElementById("otSpecialEmployeeSelect");
+        sel.innerHTML = "";
+        employees.forEach(emp => {
+          const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+          const opt = document.createElement("option");
+          opt.value = emp.lineUserId; opt.textContent = label;
+          sel.appendChild(opt);
+        });
+        document.getElementById("otSpecialDate").value = formatDateForInput(new Date());
+        document.getElementById("btnSubmitOtSpecial").onclick = submitOtSpecial;
+      } catch (err) {
+        // เช็คสิทธิ์แอดมินไม่ผ่านก็ไม่เป็นไร แค่ไม่โชว์แท็บพิเศษ ไม่ต้องแจ้ง error ให้พนักงานทั่วไปเห็น
+        console.error("initOtPage admin check error:", err);
+      }
+    }
+
+    function setupOtAdminTabs() {
+      document.querySelectorAll("#otAdminTabs .adminTabBtn").forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll("#otAdminTabs .adminTabBtn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("otForm").style.display = btn.dataset.tab === "request" ? "block" : "none";
+          document.getElementById("otSpecialForm").style.display = btn.dataset.tab === "special" ? "block" : "none";
+        };
+      });
+    }
+
+    async function submitOtSpecial() {
+      const targetLineUserId = document.getElementById("otSpecialEmployeeSelect").value;
+      const date = document.getElementById("otSpecialDate").value;
+      const otType = document.getElementById("otSpecialType").value;
+      if (!targetLineUserId || !date) { alert("กรุณาเลือกพนักงานและวันที่ให้ครบ"); return; }
+
+      showStatus("กำลังบันทึก...", false);
+      try {
+        const result = await callBackend({
+          action: "admin_set_ot_special", lineUserId: profile.userId,
+          targetLineUserId: targetLineUserId, date: date, otType: otType
+        });
+        showStatus("✅ " + result.message, false);
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
     }
 
     async function submitOtRequest() {
