@@ -7,6 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- ✏️ แก้ได้: ฟอนต์หลักของทั้งหน้า — ตอนนี้ใช้ Sarabun (ฟอนต์ไทย) ถ้าจะเปลี่ยนฟอนต์ ต้องแก้ลิงก์ Google Fonts นี้ + ค่า font-family ใน body ด้านล่างให้ตรงกันทั้งคู่ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     /* ✏️ แก้ได้: โทนสีหลักของทั้งหน้า — ธีมเนวี่ #000033 ตามสีโลโก้บริษัท สลับกับขาว */
     :root {
@@ -23,7 +27,7 @@
     }
 
     body {
-      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
       text-align: center;
       padding: 16px;
       background: linear-gradient(180deg, #dcdcf0 0%, var(--bg-page) 220px);
@@ -74,7 +78,7 @@
 
     /* ✏️ แก้ได้: หัวข้อหลัก (อยู่บรรทัดบนในกล่องข้อความข้างโลโก้) */
     #pageTitle {
-      font-size: 13px;
+      font-size: 16px;
       font-weight: 700;
       color: var(--navy);
       margin: 0;
@@ -101,7 +105,7 @@
     /* ✏️ แก้ได้: ปุ่มทั้งหมด (ลงเวลาเข้า/ออก, ส่งคำขออนุมัติ) — สีเนวี่ล้วน ไม่มีเงา/ไล่เฉด ตามที่กำหนด */
     button {
       padding: 14px 20px;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 600;
       margin: 6px 0;
       border-radius: 12px;
@@ -158,7 +162,7 @@
       margin-top: 14px;
       margin-bottom: 4px;
       color: var(--navy);
-      font-size: 13px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
@@ -224,8 +228,8 @@
       box-shadow: none;
     }
 
-    /* ✏️ แก้ได้: หน้าแอดมิน + หน้าบันทึกงาน + หน้าข้อมูลทีม — พื้นขาว กรอบเนวี่ #000033 เหมือนฟอร์ม OT */
-    #adminSection, #noteSection, #teamSection {
+    /* ✏️ แก้ได้: หน้าแอดมิน + หน้าบันทึกงาน + หน้าข้อมูลทีม + ฟอร์ม OT พิเศษ — พื้นขาว กรอบเนวี่ #000033 เหมือนฟอร์ม OT */
+    #adminSection, #noteSection, #teamSection, #otSpecialForm {
       display: none;
       margin: 16px auto 0;
       text-align: left;
@@ -238,7 +242,7 @@
     }
     #adminSection label, #noteSection label, #teamSection label, #otSpecialForm label {
       font-weight: 600; display: block; margin-top: 14px; margin-bottom: 4px;
-      color: var(--navy); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em;
+      color: var(--navy); font-size: 14px; text-transform: uppercase; letter-spacing: 0.03em;
     }
     #adminSection input, #adminSection select, #adminSection textarea,
     #noteSection input, #noteSection textarea,
@@ -258,7 +262,7 @@
     .adminTabs { display: flex; gap: 8px; margin-bottom: 8px; }
     .adminTabBtn {
       flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--navy);
-      background: #fff; color: var(--navy); font-size: 13px; font-weight: 600; cursor: pointer;
+      background: #fff; color: var(--navy); font-size: 14px; font-weight: 600; cursor: pointer;
       box-shadow: none; margin: 0;
     }
     .adminTabBtn.active { background: var(--navy); color: #fff; }
