@@ -289,6 +289,10 @@
     .teamViewLabel { color: var(--text-muted); font-weight: 600; }
     .teamViewValue { color: var(--text-dark); text-align: right; }
 
+    /* ✏️ แก้ได้: แถวคู่ — เอา 2 รายการมาอยู่บรรทัดเดียวกัน ประหยัดพื้นที่ (เช่น ลาป่วย+ลากิจ) */
+    .teamViewRowDouble { justify-content: flex-start; gap: 24px; }
+    .teamViewRowDouble > span { display: flex; gap: 6px; }
+
     /* ✏️ แก้ได้: ข้อความชื่อผู้พัฒนาท้ายหน้า */
     .credit {
       margin-top: 18px;
@@ -424,6 +428,7 @@
           <select id="exportEmployeeSelect"></select>
           <label>เลือกเดือน</label>
           <input type="month" id="exportMonthInput">
+          <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 8px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
           <button id="btnExportExcel">ดาวน์โหลด Excel</button>
         </div>
 
@@ -493,6 +498,7 @@
           <input type="month" id="teamStatsMonthInput" style="width:auto;">
           <button type="button" id="btnTeamStatsAllTime" style="width:auto; padding:6px 12px;">สะสมทั้งหมด</button>
         </div>
+        <div style="font-size:12px; color:var(--text-muted); margin:2px 0 0;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
         <div id="teamStatsView" style="margin-top:10px; padding:10px; border-radius:8px; background:rgba(0,0,51,0.04); font-size:13px;"></div>
 
         <button id="btnSaveTeamProfile">บันทึกข้อมูล</button>
@@ -504,11 +510,12 @@
           <label>เลือกพนักงาน</label>
           <select id="teamViewEmployeeSelect"></select>
         </div>
-        <div style="margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <label style="margin:0;">ดูสถิติสาย/ขาดงานเดือน:</label>
+        <div style="margin-bottom:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <label style="margin:0;">ดูสถิติสาย/ขาดงาน/OT เดือน:</label>
           <input type="month" id="teamViewMonthInput" style="width:auto;">
           <button type="button" id="btnTeamViewAllTime" style="width:auto; padding:6px 12px;">สะสมทั้งหมด</button>
         </div>
+        <div style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก (ชั่วโมง OT ต้องเลือกเดือนถึงจะเห็น)</div>
         <div id="teamViewDisplay"></div>
       </div>
     </div>
@@ -938,6 +945,7 @@
           action: "get_team_profile", lineUserId: profile.userId, targetLineUserId: targetLineUserId, month: monthStr
         });
         const periodLabel = monthStr ? `เดือน ${formatMonthLabel(monthStr)}` : "สะสม";
+        // ✏️ แก้ได้: แถวปกติ = [label, value] แถวคู่ (2 อย่างในบรรทัดเดียว) = [[label1,value1],[label2,value2]]
         const rows = [
           ["ชื่อเล่น", p.nickname || "-"],
           ["ชื่อ-นามสกุลจริง", p.fullName || "-"],
@@ -945,16 +953,26 @@
           ["Email", p.email || "-"],
           ["วันเข้าทำงาน", p.startDate || "-"],
           ["อายุงาน", p.tenureText],
-          ["ลาป่วย", `${p.sickLeave || 0} วัน`],
-          ["ลากิจ", `${p.personalLeave || 0} วัน`],
-          ["ลาพักร้อน", `${p.vacationLeave || 0} วัน`],
-          ["จำนวนใบเตือน", `${p.warningCount || 0} ใบ`],
+          [["ลาป่วย", `${p.sickLeave || 0} วัน`], ["ลากิจ", `${p.personalLeave || 0} วัน`]],
+          [["ลาพักร้อน", `${p.vacationLeave || 0} วัน`], ["ใบเตือน", `${p.warningCount || 0} ใบ`]],
           [`สาย (${periodLabel})`, `${p.lateCount} ครั้ง`],
           ["ขาดงาน (สาย 3 = ขาด 1)", `${p.absenceFromLate} ครั้ง`]
         ];
-        el.innerHTML = rows.map(([label, value]) =>
-          `<div class="teamViewRow"><span class="teamViewLabel">${label}</span><span class="teamViewValue">${escapeHtml(String(value))}</span></div>`
-        ).join("");
+        // ชั่วโมง OT มีให้ดูเฉพาะตอนเลือกเดือนแล้วเท่านั้น (ไม่มีโหมดสะสมทั้งหมด)
+        if (monthStr && p.otHours !== null && p.otHours !== undefined) {
+          rows.push([`OT รวม (${periodLabel})`, `${p.otHours} ชม.`]);
+        }
+        el.innerHTML = rows.map(row => {
+          if (Array.isArray(row[0])) {
+            const [[l1, v1], [l2, v2]] = row;
+            return `<div class="teamViewRow teamViewRowDouble">
+              <span><span class="teamViewLabel">${l1}:</span><span class="teamViewValue">${escapeHtml(String(v1))}</span></span>
+              <span><span class="teamViewLabel">${l2}:</span><span class="teamViewValue">${escapeHtml(String(v2))}</span></span>
+            </div>`;
+          }
+          const [label, value] = row;
+          return `<div class="teamViewRow"><span class="teamViewLabel">${label}</span><span class="teamViewValue">${escapeHtml(String(value))}</span></div>`;
+        }).join("");
       } catch (err) {
         el.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
       }
