@@ -422,6 +422,12 @@
         * ระบบจะดึงชั่วโมง OT ที่มีอยู่แล้วของวันนั้นมาบวกเพิ่มอีก 8 ชม. ให้อัตโนมัติ และล้าง OT เดิมของวันนั้นออกกันนับซ้ำ
       </div>
 
+      <label>หัก OT (ชม.)</label>
+      <input type="number" id="otSpecialDeduct" min="0" step="0.5" placeholder="0">
+      <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">
+        * ถ้ามี จะไปหักออกจากยอด OT เรท 1.50 ของพนักงานคนนี้ในเดือนนั้นเท่านั้น (ไม่กระทบเรท 1.25 / 2.00) ถ้าไม่ต้องการหัก เว้นว่างไว้ได้
+      </div>
+
       <button id="btnSubmitOtSpecial">บันทึก OT พิเศษ</button>
     </div>
 
@@ -991,13 +997,15 @@
           [`สาย (${periodLabel})`, `${p.lateCount} ครั้ง`],
           ["ขาดงาน (สาย 3 = ขาด 1)", `${p.absenceFromLate} ครั้ง`]
         ];
-        // ชั่วโมง OT มีให้ดูเฉพาะตอนเลือกเดือนแล้วเท่านั้น (ไม่มีโหมดสะสมทั้งหมด) — แยกตามเรท 1.50/1.25/2.00
+        // ชั่วโมง OT มีให้ดูเฉพาะตอนเลือกเดือนแล้วเท่านั้น (ไม่มีโหมดสะสมทั้งหมด) — แยกตามเรท คนละแถว + แถวหัก OT ก่อนแถวเรท
         if (monthStr && p.otBreakdown) {
           const b = p.otBreakdown;
           const totalOt = Math.round((b.rate150 + b.rate125 + b.rate200) * 100) / 100;
           rows.push([`OT รวม (${periodLabel})`, `${totalOt} ชม.`]);
-          rows.push([["1.50x", `${b.rate150} ชม.`], ["1.25x", `${b.rate125} ชม.`]]);
-          rows.push(["2.00x (วันหยุดพิเศษ)", `${b.rate200} ชม.`]);
+          rows.push(["หัก OT", `${b.otDeduct} ชม.`]);
+          rows.push(["OT เรท 1.25", `${b.rate125} ชม.`]);
+          rows.push(["OT เรท 1.50", `${b.rate150} ชม.`]);
+          rows.push(["OT เรท 2.00", `${b.rate200} ชม.`]);
         }
         el.innerHTML = rows.map(row => {
           if (Array.isArray(row[0])) {
@@ -1212,15 +1220,18 @@
       const targetLineUserId = document.getElementById("otSpecialEmployeeSelect").value;
       const date = document.getElementById("otSpecialDate").value;
       const otType = document.getElementById("otSpecialType").value;
+      const otDeductHours = document.getElementById("otSpecialDeduct").value;
       if (!targetLineUserId || !date) { alert("กรุณาเลือกพนักงานและวันที่ให้ครบ"); return; }
 
       showStatus("กำลังบันทึก...", false);
       try {
         const result = await callBackend({
           action: "admin_set_ot_special", lineUserId: profile.userId,
-          targetLineUserId: targetLineUserId, date: date, otType: otType
+          targetLineUserId: targetLineUserId, date: date, otType: otType,
+          otDeductHours: otDeductHours
         });
         showStatus("✅ " + result.message, false);
+        document.getElementById("otSpecialDeduct").value = "";
       } catch (err) {
         showStatus("❌ " + err.message, true);
       }
