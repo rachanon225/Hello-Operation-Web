@@ -7,6 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- ✏️ ใช้เฉพาะปุ่ม "บันทึกรูป" ในหน้าข้อมูลทีม (แคปหน้าจอเป็นไฟล์ .png ได้โดยไม่ต้องสกรีนช็อตเอง) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- ✏️ แก้ได้: ฟอนต์หลักของทั้งหน้า — ตอนนี้ใช้ Sarabun (ฟอนต์ไทย) ถ้าจะเปลี่ยนฟอนต์ ต้องแก้ลิงก์ Google Fonts นี้ + ค่า font-family ใน body ด้านล่างให้ตรงกันทั้งคู่ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -451,15 +453,10 @@
     <div id="adminSection">
       <div id="adminAccessDenied" style="display:none;">🔒 เฉพาะผู้ดูแลระบบเท่านั้น</div>
       <div id="adminPanel" style="display:none;">
-        <!-- ✏️ แก้ได้: ปุ่มนี้ช่วยให้ดาวน์โหลดไฟล์ Excel เสถียรกว่า เพราะ LINE in-app browser
-             บางเครื่องไม่โชว์การแจ้งเตือนดาวน์โหลดให้เห็นชัด -->
-        <button type="button" id="btnOpenExternal" style="background:#6b6b85; margin-bottom:10px;">
-          🌐 เปิดหน้านี้ในเบราว์เซอร์ภายนอก (ดาวน์โหลดไฟล์ได้เสถียรกว่า)
-        </button>
-
         <div class="adminTabs">
           <button type="button" class="adminTabBtn active" data-tab="export">📊 รายงาน Excel</button>
           <button type="button" class="adminTabBtn" data-tab="notes">📝 โน้ตงาน</button>
+          <button type="button" class="adminTabBtn" data-tab="workdays">📅 วันทำงาน</button>
         </div>
 
         <div id="adminTabExport" class="adminTabContent">
@@ -485,6 +482,18 @@
           <input type="month" id="settingsMonthInput">
           <button id="btnLoadNotes" type="button">โหลดโน้ตงาน</button>
           <div id="notesListView"></div>
+        </div>
+
+        <!-- ✏️ แก้ได้: สรุปวันทำงาน/วันหยุด/วันลาของแต่ละคนในรอบเดือนที่เลือก -->
+        <div id="adminTabWorkdays" class="adminTabContent" style="display:none;">
+          <label>เลือกเดือน</label>
+          <input type="month" id="workdaysMonthInput">
+          <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 8px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
+          <button type="button" id="btnLoadWorkdays">โหลดข้อมูล</button>
+          <div id="workdaysTableWrap" style="margin-top:12px; overflow-x:auto;"></div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">
+            * "วันลา", "วันหยุดพิเศษ" และ "สลับวันหยุด" ยังไม่มีฐานข้อมูลเก็บจริงในระบบตอนนี้ (โชว์เป็น 0 ไปก่อน) รอเพิ่มระบบบันทึกข้อมูลส่วนนี้ภายหลัง — ตอนนี้เห็นแค่หน้าตาก่อน
+          </div>
         </div>
       </div>
     </div>
@@ -556,6 +565,7 @@
         </div>
         <div style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก (ชั่วโมง OT ต้องเลือกเดือนถึงจะเห็น)</div>
         <div id="teamViewDisplay"></div>
+        <button type="button" id="btnSaveTeamViewImage" style="margin-top:12px; background:#6b6b85;">📸 บันทึกรูป</button>
       </div>
     </div>
 
@@ -684,15 +694,13 @@
         document.getElementById("exportMonthInput").value = monthDefault;
         document.getElementById("settingsMonthInput").value = monthDefault;
         document.getElementById("adminNoteDate").value = formatDateForInput(now);
+        document.getElementById("workdaysMonthInput").value = monthDefault;
 
         document.getElementById("btnExportExcel").onclick = handleExportClick;
         document.getElementById("btnSaveAdminNote").onclick = handleSaveAdminNoteClick;
         document.getElementById("btnLoadNotes").onclick = handleLoadNotesClick;
         document.getElementById("adminNoteDate").onchange = loadAdminNoteForSelectedEmployee;
-        // ✏️ แก้ได้: เปิดหน้าปัจจุบันซ้ำในเบราว์เซอร์นอก LINE (Chrome/Safari) ให้ดาวน์โหลดไฟล์ได้เสถียรกว่า
-        document.getElementById("btnOpenExternal").onclick = () => {
-          liff.openWindow({ url: location.href, external: true });
-        };
+        document.getElementById("btnLoadWorkdays").onclick = handleLoadWorkdaysClick;
       } catch (err) {
         showStatus("❌ " + err.message, true);
       }
@@ -705,8 +713,44 @@
           btn.classList.add("active");
           document.getElementById("adminTabExport").style.display = btn.dataset.tab === "export" ? "block" : "none";
           document.getElementById("adminTabNotes").style.display = btn.dataset.tab === "notes" ? "block" : "none";
+          document.getElementById("adminTabWorkdays").style.display = btn.dataset.tab === "workdays" ? "block" : "none";
         };
       });
+    }
+
+    // ✏️ แก้ได้: โหลด+แสดงตารางสรุปวันทำงาน/วันหยุด/วันลา ของทุกคนในเดือนที่เลือก
+    async function handleLoadWorkdaysClick() {
+      const monthStr = document.getElementById("workdaysMonthInput").value;
+      const wrap = document.getElementById("workdaysTableWrap");
+      if (!monthStr) { alert("กรุณาเลือกเดือน"); return; }
+      wrap.innerHTML = "กำลังโหลด...";
+      try {
+        const result = await callBackend({ action: "get_workdays_summary", lineUserId: profile.userId, month: monthStr });
+        const rows = result.employees || [];
+        if (rows.length === 0) {
+          wrap.innerHTML = "<p>ไม่พบข้อมูลพนักงาน</p>";
+          return;
+        }
+        const head = `<tr>
+          <th style="text-align:left; padding:6px 8px; border-bottom:2px solid var(--navy);">พนักงาน</th>
+          <th style="padding:6px 8px; border-bottom:2px solid var(--navy);">วันทำงาน</th>
+          <th style="padding:6px 8px; border-bottom:2px solid var(--navy);">วันลา</th>
+          <th style="padding:6px 8px; border-bottom:2px solid var(--navy);">หยุดสุดสัปดาห์</th>
+          <th style="padding:6px 8px; border-bottom:2px solid var(--navy);">วันหยุดพิเศษ</th>
+          <th style="padding:6px 8px; border-bottom:2px solid var(--navy);">สลับวันหยุด</th>
+        </tr>`;
+        const body = rows.map(r => `<tr>
+          <td style="text-align:left; padding:6px 8px; border-bottom:1px solid #eee;">${escapeHtml(r.name)}</td>
+          <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #eee;">${r.workDays}</td>
+          <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #eee;">${r.leaveDays}</td>
+          <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #eee;">${r.weekendDays}</td>
+          <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #eee;">${r.holidayDays}</td>
+          <td style="text-align:center; padding:6px 8px; border-bottom:1px solid #eee;">${r.swapDays}</td>
+        </tr>`).join("");
+        wrap.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:13px;">${head}${body}</table>`;
+      } catch (err) {
+        wrap.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
     }
 
     // ✏️ แก้ได้: รูปแบบ label ใน dropdown เลือกพนักงาน เช่น "ชื่อเล่น (ชื่อจริง)"
@@ -862,6 +906,7 @@
 
     async function initTeamPage() {
       document.getElementById("teamSection").style.display = "block";
+      document.getElementById("btnSaveTeamViewImage").onclick = saveTeamViewAsImage;
       try {
         const check = await callBackend({ action: "check_admin", lineUserId: profile.userId });
         teamIsAdmin = check.isAdmin;
@@ -1020,6 +1065,21 @@
         }).join("");
       } catch (err) {
         el.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
+    }
+
+    // ✏️ แก้ได้: บันทึกเนื้อหาในกล่อง "ดูข้อมูลพนักงาน" เป็นไฟล์รูปภาพ .png (ใช้ html2canvas — โหลดจาก CDN ใน <head>)
+    async function saveTeamViewAsImage() {
+      const el = document.getElementById("teamViewDisplay");
+      if (!el.innerHTML.trim()) { alert("ยังไม่มีข้อมูลให้บันทึกรูป"); return; }
+      try {
+        const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2 });
+        const link = document.createElement("a");
+        link.download = `ข้อมูลพนักงาน_${formatDateForInput(new Date())}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } catch (err) {
+        alert("บันทึกรูปไม่สำเร็จ: " + err.message);
       }
     }
 
