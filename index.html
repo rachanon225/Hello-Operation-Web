@@ -230,8 +230,8 @@
       box-shadow: none;
     }
 
-    /* ✏️ แก้ได้: หน้าแอดมิน + หน้าบันทึกงาน + หน้าข้อมูลทีม + ฟอร์ม OT พิเศษ — พื้นขาว กรอบเนวี่ #000033 เหมือนฟอร์ม OT */
-    #adminSection, #noteSection, #teamSection, #otSpecialForm {
+    /* ✏️ แก้ได้: หน้าแอดมิน + หน้าบันทึกงาน + หน้าข้อมูลทีม + ฟอร์ม OT พิเศษ + หน้าลางาน — พื้นขาว กรอบเนวี่ #000033 เหมือนฟอร์ม OT */
+    #adminSection, #noteSection, #teamSection, #otSpecialForm, #leaveSection {
       display: none;
       margin: 16px auto 0;
       text-align: left;
@@ -242,21 +242,23 @@
       border: 2px solid var(--navy);
       color: var(--text-dark);
     }
-    #adminSection label, #noteSection label, #teamSection label, #otSpecialForm label {
+    #adminSection label, #noteSection label, #teamSection label, #otSpecialForm label, #leaveSection label {
       font-weight: 600; display: block; margin-top: 14px; margin-bottom: 4px;
       color: var(--navy); font-size: 14px; text-transform: uppercase; letter-spacing: 0.03em;
     }
     #adminSection input, #adminSection select, #adminSection textarea,
     #noteSection input, #noteSection textarea,
     #teamSection input, #teamSection select,
-    #otSpecialForm input, #otSpecialForm select {
+    #otSpecialForm input, #otSpecialForm select,
+    #leaveSection input, #leaveSection select, #leaveSection textarea {
       width: 100%; padding: 10px 12px; margin: 2px 0; box-sizing: border-box; font-size: 15px;
       border-radius: 8px; border: 1px solid #d3d6de; background: #fff; color: var(--text-dark); font-family: inherit;
     }
     #adminSection input:focus, #adminSection select:focus, #adminSection textarea:focus,
     #noteSection input:focus, #noteSection textarea:focus,
     #teamSection input:focus, #teamSection select:focus,
-    #otSpecialForm input:focus, #otSpecialForm select:focus {
+    #otSpecialForm input:focus, #otSpecialForm select:focus,
+    #leaveSection input:focus, #leaveSection select:focus, #leaveSection textarea:focus {
       outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0, 0, 51, 0.15);
     }
 
@@ -447,6 +449,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         บันทึกงาน
       </a>
+      <a class="menuLinkBtn" href="?type=leave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+        ลางาน
+      </a>
     </div>
 
     <!-- หน้าแอดมิน (?type=admin) — export Excel + ตั้งค่าชื่อเล่น/ดูโน้ตงาน -->
@@ -492,7 +498,7 @@
           <button type="button" id="btnLoadWorkdays">โหลดข้อมูล</button>
           <div id="workdaysTableWrap" style="margin-top:12px; overflow-x:auto;"></div>
           <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">
-            * "วันลา", "วันหยุดพิเศษ" และ "สลับวันหยุด" ยังไม่มีฐานข้อมูลเก็บจริงในระบบตอนนี้ (โชว์เป็น 0 ไปก่อน) รอเพิ่มระบบบันทึกข้อมูลส่วนนี้ภายหลัง — ตอนนี้เห็นแค่หน้าตาก่อน
+            * "วันลา" มาจากคำขอลาที่อนุมัติแล้ว, "วันหยุดพิเศษ"/"สลับวันหยุด" มาจากที่แอดมินบันทึกไว้ในหน้า "ลางาน" → แท็บ "วันหยุด"
           </div>
         </div>
       </div>
@@ -532,12 +538,8 @@
         <input type="date" id="teamStartDate">
         <div id="teamTenureView" style="margin-top:6px; font-size:13px; color:var(--text-muted);"></div>
 
-        <label>ลาป่วย (วัน)</label>
-        <input type="number" id="teamSickLeave" min="0">
-        <label>ลากิจ (วัน)</label>
-        <input type="number" id="teamPersonalLeave" min="0">
-        <label>ลาพักร้อน (วัน)</label>
-        <input type="number" id="teamVacationLeave" min="0">
+        <div style="font-size:12px; color:var(--text-muted); margin-top:14px;">* จำนวนวันลาป่วย/ลากิจ/ลาพักร้อน ย้ายไปคำนวณจากหน้า "ลางาน" อัตโนมัติแล้ว ไม่ต้องกรอกตรงนี้ (ดูได้ในแท็บ "ดูข้อมูลพนักงาน")</div>
+
         <label>จำนวนใบเตือน</label>
         <input type="number" id="teamWarningCount" min="0">
 
@@ -566,6 +568,52 @@
         <div style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก (ชั่วโมง OT ต้องเลือกเดือนถึงจะเห็น)</div>
         <div id="teamViewDisplay"></div>
         <button type="button" id="btnSaveTeamViewImage" style="margin-top:12px; background:#6b6b85;">📸 บันทึกรูป</button>
+      </div>
+    </div>
+
+    <!-- หน้าลางาน (?type=leave) — พนักงานทุกคนขอลาของตัวเองได้ / แอดมินเห็นแท็บเพิ่มสำหรับจัดการวันหยุด -->
+    <div id="leaveSection">
+      <div id="leaveAdminTabs" class="adminTabs" style="display:none;">
+        <button type="button" class="adminTabBtn active" data-tab="request">📋 ลางาน</button>
+        <button type="button" class="adminTabBtn" data-tab="holiday">📅 วันหยุด</button>
+      </div>
+
+      <!-- แท็บ "ลางาน" — ทุกคนเข้าถึงได้ พนักงานทั่วไปขอได้แค่ของตัวเอง แอดมินขอแทนใครก็ได้ -->
+      <div id="leaveTabRequest" class="adminTabContent">
+        <div id="leaveEmployeePickerWrap" style="display:none;">
+          <label>เลือกพนักงาน</label>
+          <select id="leaveEmployeeSelect"></select>
+        </div>
+        <label>ประเภทการลา</label>
+        <select id="leaveTypeSelect">
+          <option value="ลากิจ">ลากิจ</option>
+          <option value="ลาป่วย">ลาป่วย</option>
+          <option value="ลาพักร้อน">ลาพักร้อน</option>
+        </select>
+        <label>ตั้งแต่วันที่</label>
+        <input type="date" id="leaveDateFrom">
+        <label>ถึงวันที่</label>
+        <input type="date" id="leaveDateTo">
+        <label>เหตุผล (ไม่บังคับ)</label>
+        <textarea id="leaveReason" rows="3"></textarea>
+        <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">* ระบบจะข้ามวันหยุดสุดสัปดาห์ในช่วงที่เลือกให้อัตโนมัติ ไม่นับเป็นวันลา</div>
+        <button id="btnSubmitLeave">ส่งคำขอลา</button>
+      </div>
+
+      <!-- แท็บ "วันหยุด" — เห็นเฉพาะแอดมิน สำหรับบันทึกวันหยุดสุดสัปดาห์/วันหยุดพิเศษ/สลับวันหยุด ให้พนักงานเป็นรายคน -->
+      <div id="leaveTabHoliday" class="adminTabContent" style="display:none;">
+        <label>เลือกพนักงาน</label>
+        <select id="holidayEmployeeSelect"></select>
+        <label>ประเภทวันหยุด</label>
+        <select id="holidayTypeSelect">
+          <option value="วันหยุดสุดสัปดาห์">วันหยุดสุดสัปดาห์</option>
+          <option value="วันหยุดพิเศษ">วันหยุดพิเศษ</option>
+          <option value="สลับวันหยุด">สลับวันหยุด (กรณีไม่มีงาน)</option>
+        </select>
+        <label>วันที่</label>
+        <input type="date" id="holidayDate">
+        <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">* ถ้าเลือก "สลับวันหยุด" แล้ววันนั้นตรงกับวันลาที่อนุมัติแล้วของพนักงานคนนี้ ระบบจะแจ้งเตือนให้ยืนยันก่อน ถ้ายืนยัน วันลานั้นจะถูกยกเลิก</div>
+        <button id="btnSubmitHoliday">บันทึกวันหยุด</button>
       </div>
     </div>
 
@@ -999,9 +1047,6 @@
         document.getElementById("teamPhone").value = p.phone || "";
         document.getElementById("teamEmail").value = p.email || "";
         document.getElementById("teamStartDate").value = p.startDate || "";
-        document.getElementById("teamSickLeave").value = p.sickLeave || 0;
-        document.getElementById("teamPersonalLeave").value = p.personalLeave || 0;
-        document.getElementById("teamVacationLeave").value = p.vacationLeave || 0;
         document.getElementById("teamWarningCount").value = p.warningCount || 0;
         document.getElementById("teamTenureView").textContent = `อายุงาน: ${p.tenureText}`;
         // ✏️ แก้ได้: ข้อความสรุปสถิติสาย/ขาดงาน (สะสมทั้งหมด หรือเฉพาะเดือนที่เลือก แล้วแต่ teamStatsMonthInput)
@@ -1093,9 +1138,6 @@
           phone: document.getElementById("teamPhone").value.trim(),
           email: document.getElementById("teamEmail").value.trim(),
           startDate: document.getElementById("teamStartDate").value,
-          sickLeave: document.getElementById("teamSickLeave").value,
-          personalLeave: document.getElementById("teamPersonalLeave").value,
-          vacationLeave: document.getElementById("teamVacationLeave").value,
           warningCount: document.getElementById("teamWarningCount").value
         });
         showStatus("✅ " + result.message, false);
@@ -1135,6 +1177,9 @@
         } else if (pageType === "team") {
           // หน้าข้อมูลทีม: ไม่ต้องเปิดกล้อง
           await initTeamPage();
+        } else if (pageType === "leave") {
+          // หน้าลางาน: ไม่ต้องเปิดกล้อง
+          await initLeavePage();
         } else {
           // หน้าลงเวลาเข้า-ออกงาน: เปิดกล้องตามปกติ
           document.getElementById("checkinSection").style.display = "block";
@@ -1292,6 +1337,115 @@
         });
         showStatus("✅ " + result.message, false);
         document.getElementById("otSpecialDeduct").value = "";
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    // ===== หน้าลางาน (?type=leave) =====
+    // พนักงานทั่วไป: เห็นแค่แท็บ "ลางาน" ขอได้แค่ของตัวเอง
+    // แอดมิน: เห็นแท็บเพิ่ม "วันหยุด" + เลือกขอลาแทนใครก็ได้ในแท็บ "ลางาน"
+    let leaveIsAdmin = false;
+    let leaveEmployeesCache = [];
+
+    async function initLeavePage() {
+      document.getElementById("leaveSection").style.display = "block";
+      document.getElementById("leaveDateFrom").value = formatDateForInput(new Date());
+      document.getElementById("leaveDateTo").value = formatDateForInput(new Date());
+      document.getElementById("holidayDate").value = formatDateForInput(new Date());
+      document.getElementById("btnSubmitLeave").onclick = submitLeaveRequest;
+
+      try {
+        const check = await callBackend({ action: "check_admin", lineUserId: profile.userId });
+        leaveIsAdmin = check.isAdmin;
+
+        if (leaveIsAdmin) {
+          document.getElementById("leaveAdminTabs").style.display = "flex";
+          document.getElementById("leaveEmployeePickerWrap").style.display = "block";
+          setupLeaveAdminTabs();
+
+          const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
+          leaveEmployeesCache = result.employees || [];
+
+          const leaveSelect = document.getElementById("leaveEmployeeSelect");
+          const holidaySelect = document.getElementById("holidayEmployeeSelect");
+          leaveSelect.innerHTML = ""; holidaySelect.innerHTML = "";
+          leaveEmployeesCache.forEach(emp => {
+            const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+            const opt1 = document.createElement("option"); opt1.value = emp.lineUserId; opt1.textContent = label;
+            leaveSelect.appendChild(opt1);
+            const opt2 = document.createElement("option"); opt2.value = emp.lineUserId; opt2.textContent = label;
+            holidaySelect.appendChild(opt2);
+          });
+
+          document.getElementById("btnSubmitHoliday").onclick = () => submitHoliday(false);
+        }
+      } catch (err) {
+        // เช็คสิทธิ์แอดมินไม่ผ่านก็ไม่เป็นไร แค่ไม่โชว์แท็บ "วันหยุด" ไม่ต้องแจ้ง error ให้พนักงานทั่วไปเห็น
+        console.error("initLeavePage admin check error:", err);
+      }
+    }
+
+    function setupLeaveAdminTabs() {
+      document.querySelectorAll("#leaveAdminTabs .adminTabBtn").forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll("#leaveAdminTabs .adminTabBtn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("leaveTabRequest").style.display = btn.dataset.tab === "request" ? "block" : "none";
+          document.getElementById("leaveTabHoliday").style.display = btn.dataset.tab === "holiday" ? "block" : "none";
+        };
+      });
+    }
+
+    async function submitLeaveRequest() {
+      const targetLineUserId = leaveIsAdmin ? document.getElementById("leaveEmployeeSelect").value : profile.userId;
+      const targetName = leaveIsAdmin
+        ? ((leaveEmployeesCache.find(e => e.lineUserId === targetLineUserId) || {}).name || "")
+        : profile.displayName;
+      const leaveType = document.getElementById("leaveTypeSelect").value;
+      const dateFrom = document.getElementById("leaveDateFrom").value;
+      const dateTo = document.getElementById("leaveDateTo").value;
+      const reason = document.getElementById("leaveReason").value.trim();
+
+      if (!dateFrom || !dateTo) { alert("กรุณาเลือกวันที่ให้ครบ"); return; }
+      if (dateTo < dateFrom) { alert("วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม"); return; }
+
+      showStatus("กำลังส่งคำขอ...", false);
+      try {
+        const result = await callBackend({
+          action: "submit_leave_request", lineUserId: profile.userId,
+          targetLineUserId: targetLineUserId, targetName: targetName,
+          leaveType: leaveType, dateFrom: dateFrom, dateTo: dateTo, reason: reason
+        });
+        showStatus("✅ " + result.message, false);
+        document.getElementById("leaveReason").value = "";
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    // ✏️ แก้ได้: บันทึกวันหยุด — ถ้า backend ตอบกลับ needConfirm จะเด้ง confirm() ให้แอดมินยืนยันก่อนค่อยส่งซ้ำแบบ confirmed=true
+    async function submitHoliday(confirmed) {
+      const targetLineUserId = document.getElementById("holidayEmployeeSelect").value;
+      const holidayType = document.getElementById("holidayTypeSelect").value;
+      const date = document.getElementById("holidayDate").value;
+      if (!targetLineUserId || !date) { alert("กรุณาเลือกพนักงานและวันที่ให้ครบ"); return; }
+
+      showStatus("กำลังบันทึก...", false);
+      try {
+        const result = await callBackend({
+          action: "admin_set_holiday", lineUserId: profile.userId,
+          targetLineUserId: targetLineUserId, holidayType: holidayType, date: date,
+          confirmed: confirmed === true
+        });
+        if (result.needConfirm) {
+          showStatus("", false);
+          if (confirm(result.message)) {
+            await submitHoliday(true);
+          }
+          return;
+        }
+        showStatus("✅ " + result.message, false);
       } catch (err) {
         showStatus("❌ " + err.message, true);
       }
