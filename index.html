@@ -1176,9 +1176,13 @@
     function captureSelfie() {
       const video = document.getElementById("video");
       const canvas = document.getElementById("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d").drawImage(video, 0, 0);
+      // ✏️ แก้ได้: จำกัดความกว้างสูงสุดของรูปที่ถ่าย ลดขนาดไฟล์ให้อัปโหลด/ประมวลผลเร็วขึ้น
+      // ไม่กระทบรูปที่แสดงบนจอเลย เพราะกรอบแสดงผลจริงเล็กกว่านี้อยู่แล้ว (ดู CSS ของ #video ด้านบน จำกัดไว้แค่ 320px)
+      const MAX_WIDTH = 800;
+      const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
       return canvas.toDataURL("image/jpeg", 0.7).split(",")[1];
     }
 
