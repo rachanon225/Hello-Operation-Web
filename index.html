@@ -524,6 +524,9 @@
         <label>เลือกพนักงาน</label>
         <select id="teamEditEmployeeSelect"></select>
 
+        <div id="teamStatusView" style="margin:10px 0 4px; font-size:14px; font-weight:600; color:var(--navy);"></div>
+        <button type="button" id="btnToggleEmployeeStatus" style="background:#6b6b85; margin-bottom:14px;"></button>
+
         <label>ชื่อเล่น</label>
         <input type="text" id="teamNickname" placeholder="เช่น พี่เอ, น้องบี">
         <label>ชื่อ-นามสกุลจริง</label>
@@ -789,7 +792,12 @@
       }
     }
 
-    // ✏️ แก้ได้: รูปแบบ label ใน dropdown เลือกพนักงาน เช่น "ชื่อเล่น (ชื่อจริง)"
+    // ✏️ แก้ได้: รูปแบบ label ใน dropdown เลือกพนักงาน เช่น "ชื่อเล่น (ชื่อจริง)" — ต่อท้ายด้วย [ลาออกแล้ว] ถ้าปิดใช้งานไว้
+    function formatEmployeeLabel(emp) {
+      const base = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+      return emp.status === "ลาออกแล้ว" ? `${base} [ลาออกแล้ว]` : base;
+    }
+
     async function loadEmployeesForAdmin() {
       const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
       employeesCache = result.employees || [];
@@ -798,10 +806,11 @@
       const notesSelect = document.getElementById("notesEmployeeSelect");
       const prevNotesValue = notesSelect.value;
 
+      // ✏️ export/โน้ตงาน โชว์ครบทุกคนรวมคนลาออกแล้ว (ยังต้อง export รายงาน/ดูโน้ตย้อนหลังของคนที่ลาออกไปแล้วได้)
       exportSelect.innerHTML = '<option value="ALL">ทั้งหมดทุกคน</option>';
       notesSelect.innerHTML = "";
       employeesCache.forEach(emp => {
-        const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+        const label = formatEmployeeLabel(emp);
         const opt1 = document.createElement("option");
         opt1.value = emp.lineUserId; opt1.textContent = label;
         exportSelect.appendChild(opt1);
@@ -957,11 +966,12 @@
           const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
           teamEmployeesCache = result.employees || [];
 
+          // ✏️ กรอกข้อมูล/ดูข้อมูลพนักงาน โชว์ครบทุกคนรวมคนลาออกแล้ว (ต้องเข้าถึงได้เผื่อสลับสถานะกลับ หรือดูประวัติย้อนหลัง)
           const editSelect = document.getElementById("teamEditEmployeeSelect");
           const viewSelect = document.getElementById("teamViewEmployeeSelect");
           editSelect.innerHTML = ""; viewSelect.innerHTML = "";
           teamEmployeesCache.forEach(emp => {
-            const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+            const label = formatEmployeeLabel(emp);
             const opt1 = document.createElement("option"); opt1.value = emp.lineUserId; opt1.textContent = label;
             editSelect.appendChild(opt1);
             const opt2 = document.createElement("option"); opt2.value = emp.lineUserId; opt2.textContent = label;
@@ -971,6 +981,7 @@
           editSelect.onchange = () => loadTeamProfileIntoForm(editSelect.value);
           viewSelect.onchange = () => loadTeamProfileIntoView(viewSelect.value);
           document.getElementById("btnSaveTeamProfile").onclick = saveTeamProfile;
+          document.getElementById("btnToggleEmployeeStatus").onclick = toggleEmployeeStatus;
 
           // ✏️ ตัวเลือกเดือนสำหรับดูสถิติสาย/ขาดงานรายเดือน (ว่าง = สะสมทั้งหมดตั้งแต่เริ่มงาน)
           document.getElementById("teamStatsMonthInput").onchange = () => loadTeamProfileIntoForm(editSelect.value);
@@ -1031,6 +1042,11 @@
         document.getElementById("teamStartDate").value = p.startDate || "";
         document.getElementById("teamWarningCount").value = p.warningCount || 0;
         document.getElementById("teamTenureView").textContent = `อายุงาน: ${p.tenureText}`;
+        // ✏️ แก้ได้: ข้อความสถานะ + ป้ายปุ่มสลับ (ทำงานอยู่ ↔ ลาออกแล้ว)
+        document.getElementById("teamStatusView").textContent = `สถานะ: ${p.status}`;
+        const toggleBtn = document.getElementById("btnToggleEmployeeStatus");
+        toggleBtn.textContent = p.status === "ลาออกแล้ว" ? "✅ เปิดใช้งานอีกครั้ง" : "🚫 ทำเครื่องหมายว่าลาออก";
+        toggleBtn.dataset.currentStatus = p.status;
         // ✏️ แก้ได้: ข้อความสรุปสถิติสาย/ขาดงาน (สะสมทั้งหมด หรือเฉพาะเดือนที่เลือก แล้วแต่ teamStatsMonthInput)
         const periodLabel = monthStr ? `เดือน ${formatMonthLabel(monthStr)}` : "สะสมทั้งหมด";
         document.getElementById("teamStatsView").innerHTML =
@@ -1118,6 +1134,25 @@
         showStatus("✅ " + result.message, false);
         await loadTeamProfileIntoForm(targetId); // โหลดใหม่เพื่ออัปเดตอายุงาน/สถิติให้ตรงกับข้อมูลล่าสุด
         // ✏️ อัปเดตรายชื่อ dropdown ทั้งสองแท็บให้ label ตรงกับชื่อเล่นล่าสุดด้วย (เผื่อเพิ่งแก้ชื่อเล่น)
+        await initTeamPage();
+      } catch (err) {
+        showStatus("❌ " + err.message, true);
+      }
+    }
+
+    // ✏️ สลับสถานะพนักงาน (ทำงานอยู่ ↔ ลาออกแล้ว) — ไม่ใช่การลบถาวร กดสลับกลับได้เสมอ
+    async function toggleEmployeeStatus() {
+      const targetId = document.getElementById("teamEditEmployeeSelect").value;
+      const currentStatus = document.getElementById("btnToggleEmployeeStatus").dataset.currentStatus;
+      const newStatus = currentStatus === "ลาออกแล้ว" ? "ทำงานอยู่" : "ลาออกแล้ว";
+      try {
+        const result = await callBackend({
+          action: "set_employee_status", lineUserId: profile.userId,
+          targetLineUserId: targetId, status: newStatus
+        });
+        showStatus("✅ " + result.message, false);
+        await loadTeamProfileIntoForm(targetId);
+        // ✏️ อัปเดตรายชื่อ dropdown ทุกจุดให้กรอง/แสดง [ลาออกแล้ว] ตามสถานะล่าสุดด้วย
         await initTeamPage();
       } catch (err) {
         showStatus("❌ " + err.message, true);
@@ -1271,12 +1306,13 @@
         document.getElementById("otAdminTabs").style.display = "flex";
         setupOtAdminTabs();
 
+        // ✏️ บันทึก OT พิเศษ เป็นการสร้างรายการใหม่ ให้เลือกได้เฉพาะพนักงานที่ยังทำงานอยู่เท่านั้น
         const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
-        const employees = result.employees || [];
+        const employees = (result.employees || []).filter(emp => emp.status !== "ลาออกแล้ว");
         const sel = document.getElementById("otSpecialEmployeeSelect");
         sel.innerHTML = "";
         employees.forEach(emp => {
-          const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+          const label = formatEmployeeLabel(emp);
           const opt = document.createElement("option");
           opt.value = emp.lineUserId; opt.textContent = label;
           sel.appendChild(opt);
@@ -1343,14 +1379,15 @@
           document.getElementById("leaveEmployeePickerWrap").style.display = "block";
           setupLeaveAdminTabs();
 
+          // ✏️ ขอลา/บันทึกสลับวันหยุด เป็นการสร้างรายการใหม่ ให้เลือกได้เฉพาะพนักงานที่ยังทำงานอยู่เท่านั้น
           const result = await callBackend({ action: "get_employees", lineUserId: profile.userId });
-          leaveEmployeesCache = result.employees || [];
+          leaveEmployeesCache = (result.employees || []).filter(emp => emp.status !== "ลาออกแล้ว");
 
           const leaveSelect = document.getElementById("leaveEmployeeSelect");
           const holidaySelect = document.getElementById("holidayEmployeeSelect");
           leaveSelect.innerHTML = ""; holidaySelect.innerHTML = "";
           leaveEmployeesCache.forEach(emp => {
-            const label = emp.nickname ? `${emp.nickname} (${emp.name})` : emp.name;
+            const label = formatEmployeeLabel(emp);
             const opt1 = document.createElement("option"); opt1.value = emp.lineUserId; opt1.textContent = label;
             leaveSelect.appendChild(opt1);
             const opt2 = document.createElement("option"); opt2.value = emp.lineUserId; opt2.textContent = label;
