@@ -461,6 +461,7 @@
           <button type="button" class="adminTabBtn active" data-tab="export">📊 รายงาน Excel</button>
           <button type="button" class="adminTabBtn" data-tab="notes">📝 โน้ตงาน</button>
           <button type="button" class="adminTabBtn" data-tab="workdays">📅 วันทำงาน</button>
+          <button type="button" class="adminTabBtn" data-tab="approvals">✅ อนุมัติคำขอ</button>
         </div>
 
         <div id="adminTabExport" class="adminTabContent">
@@ -498,6 +499,12 @@
           <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">
             * "วันลา" มาจากคำขอลาที่อนุมัติแล้ว, "สลับวันหยุด" มาจากที่แอดมินบันทึกไว้ในหน้า "ลางาน" → แท็บ "สลับวันหยุด"
           </div>
+        </div>
+
+        <!-- ✏️ แก้ได้: อนุมัติ OT/ลางานผ่านหน้าเว็บนี้เลย ไม่ต้องรอการ์ด LINE (เผื่อโควต้าข้อความหมด) — กดแล้วมีผลทันที เหมือนกดผ่านการ์ด -->
+        <div id="adminTabApprovals" class="adminTabContent" style="display:none;">
+          <button type="button" id="btnLoadApprovals" style="margin-bottom:10px;">🔄 โหลดคำขอที่รออนุมัติ</button>
+          <div id="approvalsListWrap"></div>
         </div>
       </div>
     </div>
@@ -742,6 +749,7 @@
         document.getElementById("btnLoadNotes").onclick = handleLoadNotesClick;
         document.getElementById("adminNoteDate").onchange = loadAdminNoteForSelectedEmployee;
         document.getElementById("btnLoadWorkdays").onclick = handleLoadWorkdaysClick;
+        document.getElementById("btnLoadApprovals").onclick = handleLoadApprovalsClick;
       } catch (err) {
         showStatus("❌ " + err.message, true);
       }
@@ -755,8 +763,73 @@
           document.getElementById("adminTabExport").style.display = btn.dataset.tab === "export" ? "block" : "none";
           document.getElementById("adminTabNotes").style.display = btn.dataset.tab === "notes" ? "block" : "none";
           document.getElementById("adminTabWorkdays").style.display = btn.dataset.tab === "workdays" ? "block" : "none";
+          document.getElementById("adminTabApprovals").style.display = btn.dataset.tab === "approvals" ? "block" : "none";
         };
       });
+    }
+
+    // ✏️ แก้ได้: โหลด+แสดงรายการ OT/ลางานที่รออนุมัติ พร้อมปุ่มอนุมัติ/ไม่อนุมัติในตัว
+    async function handleLoadApprovalsClick() {
+      const wrap = document.getElementById("approvalsListWrap");
+      wrap.innerHTML = "กำลังโหลด...";
+      try {
+        const result = await callBackend({ action: "get_pending_approvals", lineUserId: profile.userId });
+        renderApprovalsList(result.ot || [], result.leave || []);
+      } catch (err) {
+        wrap.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
+    }
+
+    function renderApprovalsList(otList, leaveList) {
+      const wrap = document.getElementById("approvalsListWrap");
+      if (otList.length === 0 && leaveList.length === 0) {
+        wrap.innerHTML = "<p>ไม่มีคำขอที่รออนุมัติ</p>";
+        return;
+      }
+
+      const cardStyle = "border:1px solid #eee; border-radius:10px; padding:12px; margin-bottom:10px;";
+      const otCards = otList.map(r => `
+        <div class="approvalCard" style="${cardStyle}">
+          <div style="font-weight:600;">🕐 OT — ${escapeHtml(r.displayName)}</div>
+          <div style="font-size:13px; margin:4px 0;">วันที่: ${formatDateDMY(r.date)} • จำนวน: ${r.hours} ชม.</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">เหตุผล: ${escapeHtml(r.reason || "-")}</div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" style="width:auto; padding:6px 14px; background:#16a34a;" onclick="handleApproveClick('web_ot_approve','${r.id}',true,this)">✅ อนุมัติ</button>
+            <button type="button" style="width:auto; padding:6px 14px; background:#ef4444;" onclick="handleApproveClick('web_ot_approve','${r.id}',false,this)">❌ ไม่อนุมัติ</button>
+          </div>
+        </div>`).join("");
+
+      const leaveCards = leaveList.map(r => {
+        const dateText = r.dates.length > 1
+          ? `${formatDateDMY(r.dates[0])} ถึง ${formatDateDMY(r.dates[r.dates.length - 1])} (${r.dates.length} วัน)`
+          : formatDateDMY(r.dates[0]);
+        return `
+        <div class="approvalCard" style="${cardStyle}">
+          <div style="font-weight:600;">📋 ลา${escapeHtml(r.leaveType)} — ${escapeHtml(r.displayName)}</div>
+          <div style="font-size:13px; margin:4px 0;">วันที่: ${dateText}</div>
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:8px;">เหตุผล: ${escapeHtml(r.reason || "-")}</div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" style="width:auto; padding:6px 14px; background:#16a34a;" onclick="handleApproveClick('web_leave_approve','${r.id}',true,this)">✅ อนุมัติ</button>
+            <button type="button" style="width:auto; padding:6px 14px; background:#ef4444;" onclick="handleApproveClick('web_leave_approve','${r.id}',false,this)">❌ ไม่อนุมัติ</button>
+          </div>
+        </div>`;
+      }).join("");
+
+      wrap.innerHTML = otCards + leaveCards;
+    }
+
+    // ✏️ แก้ได้: กดอนุมัติ/ไม่อนุมัติในหน้าเว็บ — ปิดปุ่มกันกดซ้ำระหว่างรอผล แล้วโหลดรายการใหม่หลังเสร็จ
+    async function handleApproveClick(action, id, approve, btnEl) {
+      const cardEl = btnEl.closest(".approvalCard");
+      const buttons = cardEl.querySelectorAll("button");
+      buttons.forEach(b => b.disabled = true);
+      try {
+        await callBackend({ action, lineUserId: profile.userId, id, approve });
+        await handleLoadApprovalsClick();
+      } catch (err) {
+        alert("❌ " + err.message);
+        buttons.forEach(b => b.disabled = false);
+      }
     }
 
     // ✏️ แก้ได้: โหลด+แสดงตารางสรุปวันทำงาน/วันหยุด/วันลา ของทุกคนในเดือนที่เลือก
