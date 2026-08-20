@@ -505,6 +505,13 @@
         <div id="adminTabApprovals" class="adminTabContent" style="display:none;">
           <button type="button" id="btnLoadApprovals" style="margin-bottom:10px;">🔄 โหลดคำขอที่รออนุมัติ</button>
           <div id="approvalsListWrap"></div>
+
+          <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
+
+          <label>ปรับสถานะสาย/ไม่สาย — เลือกวันที่</label>
+          <input type="date" id="lateStatusDateInput">
+          <button type="button" id="btnLoadLateStatus" style="margin-top:8px;">🔄 โหลดรายการเข้างาน</button>
+          <div id="lateStatusListWrap" style="margin-top:10px;"></div>
         </div>
       </div>
     </div>
@@ -750,6 +757,8 @@
         document.getElementById("adminNoteDate").onchange = loadAdminNoteForSelectedEmployee;
         document.getElementById("btnLoadWorkdays").onclick = handleLoadWorkdaysClick;
         document.getElementById("btnLoadApprovals").onclick = handleLoadApprovalsClick;
+        document.getElementById("lateStatusDateInput").value = formatDateForInput(now);
+        document.getElementById("btnLoadLateStatus").onclick = handleLoadLateStatusClick;
       } catch (err) {
         showStatus("❌ " + err.message, true);
       }
@@ -826,6 +835,56 @@
       try {
         await callBackend({ action, lineUserId: profile.userId, id, approve });
         await handleLoadApprovalsClick();
+      } catch (err) {
+        alert("❌ " + err.message);
+        buttons.forEach(b => b.disabled = false);
+      }
+    }
+
+    // ✏️ แก้ได้: โหลด+แสดงรายชื่อคนที่เช็คอินแล้วในวันที่เลือก พร้อมปุ่มปรับสถานะสาย/ไม่สาย
+    async function handleLoadLateStatusClick() {
+      const dateStr = document.getElementById("lateStatusDateInput").value;
+      const wrap = document.getElementById("lateStatusListWrap");
+      if (!dateStr) { alert("กรุณาเลือกวันที่"); return; }
+      wrap.innerHTML = "กำลังโหลด...";
+      try {
+        const result = await callBackend({ action: "get_checkins_for_date", lineUserId: profile.userId, date: dateStr });
+        renderLateStatusList(result.checkins || []);
+      } catch (err) {
+        wrap.innerHTML = `<p style="color:#ef4444">❌ ${err.message}</p>`;
+      }
+    }
+
+    function renderLateStatusList(list) {
+      const wrap = document.getElementById("lateStatusListWrap");
+      if (list.length === 0) {
+        wrap.innerHTML = "<p>ไม่มีคนเช็คอินวันนี้</p>";
+        return;
+      }
+      const cardStyle = "border:1px solid #eee; border-radius:10px; padding:12px; margin-bottom:10px;";
+      wrap.innerHTML = list.map(r => {
+        const isLate = r.isLate === "สาย";
+        const lateText = isLate ? `⚠️ สาย ${r.lateHours} ชม.` : "🕒 ไม่สาย";
+        const lateColor = isLate ? "#ef4444" : "#16a34a";
+        return `
+        <div class="lateStatusCard" style="${cardStyle}">
+          <div style="font-weight:600;">${escapeHtml(r.displayName)}</div>
+          <div style="font-size:13px; margin:4px 0;">เข้างาน: ${r.timeIn} น. • <span style="color:${lateColor}; font-weight:600;">${lateText}</span></div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" style="width:auto; padding:6px 14px; background:#ef4444;" onclick="handleSetLateClick('${r.rowId}',true,this)">⚠️ ตั้งเป็นสาย</button>
+            <button type="button" style="width:auto; padding:6px 14px; background:#16a34a;" onclick="handleSetLateClick('${r.rowId}',false,this)">🕒 ตั้งเป็นไม่สาย</button>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    async function handleSetLateClick(rowId, setLate, btnEl) {
+      const cardEl = btnEl.closest(".lateStatusCard");
+      const buttons = cardEl.querySelectorAll("button");
+      buttons.forEach(b => b.disabled = true);
+      try {
+        await callBackend({ action: "web_set_late", lineUserId: profile.userId, rowId, setLate });
+        await handleLoadLateStatusClick();
       } catch (err) {
         alert("❌ " + err.message);
         buttons.forEach(b => b.disabled = false);
