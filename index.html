@@ -418,17 +418,11 @@
       <select id="otSpecialType">
         <option value="WE">วันหยุดประจำสัปดาห์ (เรทปกติ 1.50 / 1.25)</option>
         <option value="HL">วันหยุดพิเศษ (เรท 2.00)</option>
+        <option value="NONE">ไม่บันทึก OT พิเศษ (หัก OT อย่างเดียว)</option>
       </select>
-
-      <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">
-        * ระบบจะดึงชั่วโมง OT ที่มีอยู่แล้วของวันนั้นมาบวกเพิ่มอีก 8 ชม. ให้อัตโนมัติ และล้าง OT เดิมของวันนั้นออกกันนับซ้ำ
-      </div>
 
       <label>หัก OT (ชม.)</label>
       <input type="number" id="otSpecialDeduct" min="0" step="0.5" placeholder="0">
-      <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">
-        * ถ้ามี จะไปหักออกจากยอด OT เรท 1.50 ของพนักงานคนนี้ในเดือนนั้นเท่านั้น (ไม่กระทบเรท 1.25 / 2.00) ถ้าไม่ต้องการหัก เว้นว่างไว้ได้
-      </div>
 
       <button id="btnSubmitOtSpecial">บันทึก OT พิเศษ</button>
     </div>
@@ -469,7 +463,6 @@
           <select id="exportEmployeeSelect"></select>
           <label>เลือกเดือน</label>
           <input type="month" id="exportMonthInput">
-          <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 8px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
           <button id="btnExportExcel">ดาวน์โหลด Excel</button>
         </div>
 
@@ -493,12 +486,8 @@
         <div id="adminTabWorkdays" class="adminTabContent" style="display:none;">
           <label>เลือกเดือน</label>
           <input type="month" id="workdaysMonthInput">
-          <div style="font-size:12px; color:var(--text-muted); margin:-6px 0 8px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
           <button type="button" id="btnLoadWorkdays">โหลดข้อมูล</button>
           <div id="workdaysTableWrap" style="margin-top:12px; overflow-x:auto;"></div>
-          <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">
-            * "วันลา" มาจากคำขอลาที่อนุมัติแล้ว, "สลับวันหยุด" มาจากที่แอดมินบันทึกไว้ในหน้า "ลางาน" → แท็บ "สลับวันหยุด"
-          </div>
         </div>
 
         <!-- ✏️ แก้ได้: อนุมัติ OT/ลางานผ่านหน้าเว็บนี้เลย ไม่ต้องรอการ์ด LINE (เผื่อโควต้าข้อความหมด) — กดแล้วมีผลทันที เหมือนกดผ่านการ์ด -->
@@ -553,8 +542,6 @@
         <input type="date" id="teamStartDate">
         <div id="teamTenureView" style="margin-top:6px; font-size:13px; color:var(--text-muted);"></div>
 
-        <div style="font-size:12px; color:var(--text-muted); margin-top:14px;">* จำนวนวันลาป่วย/ลากิจ/ลาพักร้อน ย้ายไปคำนวณจากหน้า "ลางาน" อัตโนมัติแล้ว ไม่ต้องกรอกตรงนี้ (ดูได้ในแท็บ "ดูข้อมูลพนักงาน")</div>
-
         <label>จำนวนใบเตือน</label>
         <input type="number" id="teamWarningCount" min="0">
 
@@ -563,7 +550,6 @@
           <input type="month" id="teamStatsMonthInput" style="width:auto;">
           <button type="button" id="btnTeamStatsAllTime" style="width:auto; padding:6px 12px;">สะสมทั้งหมด</button>
         </div>
-        <div style="font-size:12px; color:var(--text-muted); margin:2px 0 0;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก</div>
         <div id="teamStatsView" style="margin-top:10px; padding:10px; border-radius:8px; background:rgba(0,0,51,0.04); font-size:13px;"></div>
 
         <button id="btnSaveTeamProfile">บันทึกข้อมูล</button>
@@ -579,7 +565,6 @@
           <label style="margin:0;">ดูสถิติสาย/ขาดงาน/OT เดือน:</label>
           <input type="month" id="teamViewMonthInput" style="width:auto;">
         </div>
-        <div style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">* รอบตัดเดือน: 26 ของเดือนก่อนหน้า ถึง 25 ของเดือนที่เลือก (ใช้กับ OT/สาย/ขาดงานเท่านั้น — วันลาและใบเตือนนับสะสมทั้งปีอัตโนมัติ)</div>
         <div id="teamViewDisplay"></div>
       </div>
     </div>
@@ -609,7 +594,6 @@
         <input type="date" id="leaveDateTo">
         <label>เหตุผล (ไม่บังคับ)</label>
         <textarea id="leaveReason" rows="3"></textarea>
-        <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">* ระบบจะข้ามวันหยุดสุดสัปดาห์ในช่วงที่เลือกให้อัตโนมัติ ไม่นับเป็นวันลา</div>
         <button id="btnSubmitLeave">ส่งคำขอลา</button>
       </div>
 
@@ -619,7 +603,6 @@
         <select id="holidayEmployeeSelect"></select>
         <label>วันที่</label>
         <input type="date" id="holidayDate">
-        <div style="font-size:12px; color:var(--text-muted); margin:4px 0 12px;">* ถ้าวันที่เลือกตรงกับวันลาที่อนุมัติแล้วของพนักงานคนนี้ ระบบจะแจ้งเตือนให้ยืนยันก่อน ถ้ายืนยัน วันลานั้นจะถูกยกเลิก</div>
         <button id="btnSubmitHoliday">บันทึกสลับวันหยุด</button>
       </div>
     </div>
@@ -683,7 +666,11 @@
 
     // ✏️ แก้ได้ลอยๆ ไม่ได้: helper กลางสำหรับเรียก backend (ใช้ทั้งหน้าแอดมินและหน้าโน้ตงาน)
     // รวม timeout + error handling ไว้ที่เดียว ไม่ต้องเขียนซ้ำทุกจุดเหมือน submitCheckin/submitOtRequest เดิม
-    async function callBackend(payload) {
+    // ⚠️ ห้ามแก้ลอยๆ: ลอง retry อัตโนมัติ 1 ครั้งก่อนโยน error ให้ผู้ใช้เห็น — เพราะ Apps Script web app
+    // บางครั้งขั้นตอนส่งผลลัพธ์กลับของ Google เองมีปัญหาเป็นครั้งคราว (เจอ HTTP 404/ไม่ใช่ JSON) ทั้งที่ฝั่ง
+    // เซิร์ฟเวอร์รันสำเร็จจริง (เช็คจาก Apps Script Executions log แล้วพบว่า doPost "เสร็จสมบูรณ์" ทุกครั้งที่
+    // ผู้ใช้เจอ error นี้) — ไม่ retry กรณี result.error เพราะเป็น error จริงจากการตรวจสอบข้อมูลของเราเอง ลองซ้ำไปก็ไม่ช่วย
+    async function callBackend(payload, attempt = 1) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
       let res;
@@ -696,11 +683,13 @@
         });
       } catch (err) {
         clearTimeout(timeoutId);
+        if (attempt < 2) return callBackend(payload, attempt + 1);
         throw new Error(err.name === "AbortError" ? "หมดเวลารอ (20 วินาที) — เซิร์ฟเวอร์อาจไม่ตอบสนอง" : err.message);
       }
       clearTimeout(timeoutId);
 
       if (!res.ok) {
+        if (attempt < 2) return callBackend(payload, attempt + 1);
         const bodyText = await res.text();
         throw new Error(`เซิร์ฟเวอร์ตอบกลับ HTTP ${res.status}\n${bodyText.slice(0, 200)}`);
       }
@@ -708,6 +697,7 @@
       try {
         result = await res.json();
       } catch (parseErr) {
+        if (attempt < 2) return callBackend(payload, attempt + 1);
         throw new Error("อ่านผลลัพธ์จากเซิร์ฟเวอร์ไม่ได้ (ไม่ใช่ JSON) — เช็คว่า WEBAPP_URL ถูกต้องและ deploy ล่าสุดหรือไม่");
       }
       if (result.error) throw new Error(result.error);
